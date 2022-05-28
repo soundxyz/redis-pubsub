@@ -26,13 +26,19 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "c8 ava"
+    "test": "c8 ava",
+    "test:watch": "ava --watch",
+    "test:watch:coverage": "bob-watch -w src test -c \"c8 ava\""
+  },
+  "dependencies": {
+    "superjson": "^1.9.1"
   },
   "devDependencies": {
     "@types/node": "^17.0.35",
     "ava": "^4.2.0",
     "bob-ts": "^4.0.0",
     "bob-tsm": "^1.0.0",
+    "bob-watch": "^0.1.2",
     "c8": "^7.11.3",
     "dotenv": "^16.0.1",
     "esbuild": "^0.14.41",
@@ -44,8 +50,5 @@
   "peerDependencies": {
     "ioredis": "^5.0.5",
     "zod": "^3.17.3"
-  },
-  "dependencies": {
-    "superjson": "^1.9.1"
   }
 }

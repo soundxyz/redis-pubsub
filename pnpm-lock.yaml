@@ -5,6 +5,7 @@ specifiers:
   ava: ^4.2.0
   bob-ts: ^4.0.0
   bob-tsm: ^1.0.0
+  bob-watch: ^0.1.2
   c8: ^7.11.3
   dotenv: ^16.0.1
   esbuild: ^0.14.41
@@ -22,6 +23,7 @@ devDependencies:
   ava: 4.2.0
   bob-ts: 4.0.0_2ood4gl2z63vouoebhdezcicjq
   bob-tsm: 1.0.0_mmxfikilz33xrhlidsphex3iei
+  bob-watch: 0.1.2
   c8: 7.11.3
   dotenv: 16.0.1
   esbuild: 0.14.41
@@ -303,6 +305,13 @@ packages:
     dependencies:
       esbuild: 0.14.41
       typescript: 4.7.2
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
+
+  /bob-watch/0.1.2:
+    resolution: {integrity: sha512-K9+Eh8PHzQCk04ayByk79/xuZ1cYsgQgI9k/gZ7mzaO4q+AItQJMBuxHX4Kmaf7QQ9u5TXdogNUTdIgpz1XAiw==}
+    hasBin: true
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
