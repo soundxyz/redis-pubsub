@@ -56,7 +56,7 @@ test("subscribe/unsubscribe and abort controller", async (t) => {
     }
   })();
 
-  await channel.ready;
+  await channel.isReady();
 
   await Promise.all([channel.publish({ value: "1" }, { value: "2" }, { value: "3" })]);
 
@@ -146,7 +146,7 @@ test("parse error on subscribe", async (t) => {
     }
   })();
 
-  await channel.ready;
+  await channel.isReady();
 
   await publisher.publish("test", stringify(123));
 
@@ -212,7 +212,7 @@ test("internal subscribe error", async (t) => {
     isLazy: false,
   });
 
-  const subscribeError = await channel.ready.then(
+  const subscribeError = await channel.isReady().then(
     () => Error("Unexpected error"),
     (err) => err
   );
@@ -246,7 +246,7 @@ test("internal unsubscribe error", async (t) => {
     isLazy: false,
   });
 
-  await channel.ready;
+  await channel.isReady();
 
   const subscribeError = await channel.unsubscribeAll().then(
     () => Error("Unexpected error"),
@@ -295,7 +295,7 @@ test("unsubscribe while still subscribing", async (t) => {
     isLazy: false,
   });
 
-  await Promise.all([channel.unsubscribeAll(), channel.ready]);
+  await Promise.all([channel.unsubscribeAll(), channel.isReady()]);
 
   t.is(didSubscribeEnd, true);
   await close();
@@ -312,7 +312,7 @@ test("filter works as expected", async (t) => {
     isLazy: false,
   });
 
-  await channel.ready;
+  await channel.isReady();
 
   const subscription1 = (async () => {
     for await (const value of channel.subscribe({
@@ -369,7 +369,7 @@ test("publish without subscriptions", async (t) => {
 
   t.teardown(() => subscriber.off("message", onMessage));
 
-  await channel.ready;
+  await channel.isReady();
   await channel.publish({
     value: "hello world",
   });
@@ -404,20 +404,25 @@ test("subscribe and publish with specifiers", async (t) => {
     }
   })();
 
-  // TODO: Support ready on specifier
-  await setTimeout(100);
+  await channel.isReady(
+    {
+      specifier: 1,
+    },
+    {
+      specifier: 2,
+    }
+  );
 
-  await Promise.all([
-    channel.publish({
+  await channel.publish(
+    {
       specifier: 1,
       value: "1",
-    }),
-    channel.publish({
+    },
+    {
       specifier: 2,
       value: "2",
-    }),
-  ]);
+    }
+  );
 
-  t.is(await subscription1, "1");
-  t.is(await subscription2, "2");
+  t.deepEqual(await Promise.all([subscription1, subscription2]), ["1", "2"]);
 });

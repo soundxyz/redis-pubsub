@@ -19,18 +19,18 @@ export function RedisPubSub({
   subscriber,
   onParseError = console.error,
 }: RedisPubSubOptions) {
-  type DataPromise = {
+  interface DataPromise {
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
-  };
-  type SubscriptionValue = {
+  }
+  interface SubscriptionValue {
     readonly name: string;
     readonly specifier: string | undefined;
     readonly channel: string;
     readonly schema: ZodSchema<unknown>;
     readonly dataPromises: Set<DataPromise>;
     ready: DeferredPromise<void>;
-  };
+  }
   const subscriptionsMap: Record<string, SubscriptionValue> = {};
 
   subscriber.on("message", onMessage);
@@ -139,17 +139,40 @@ export function RedisPubSub({
   }) {
     if (!isLazy) {
       const channel = name;
-      const initialSubscriptionValue = (subscriptionsMap[name] = {
-        dataPromises: new Set<DataPromise>(),
+      const initialSubscriptionValue = getSubscriptionValue({
         name,
         channel,
         specifier: undefined,
-        schema,
-        ready: createDeferredPromise(),
       });
       redisSubscribe({
         channel,
       })?.then(initialSubscriptionValue.ready.resolve, initialSubscriptionValue.ready.reject);
+    }
+
+    return {
+      isReady,
+      subscribe,
+      publish,
+      unsubscribeAll,
+    };
+
+    function getSubscriptionValue({
+      name,
+      channel,
+      specifier,
+    }: {
+      name: string;
+      channel: string;
+      specifier: string | number | undefined;
+    }) {
+      return (subscriptionsMap[channel] ||= {
+        dataPromises: new Set<DataPromise>(),
+        name,
+        channel,
+        specifier: specifier?.toString(),
+        schema,
+        ready: createDeferredPromise(),
+      });
     }
 
     function subscribe<FilteredValue extends Value>(subscribeArguments: {
@@ -173,13 +196,10 @@ export function RedisPubSub({
     } = {}) {
       const channel = specifier ? name + specifier : name;
 
-      const subscriptionValue = (subscriptionsMap[channel] ||= {
-        schema,
+      const subscriptionValue = getSubscriptionValue({
         name,
-        specifier: specifier?.toString(),
+        specifier,
         channel,
-        dataPromises: new Set(),
-        ready: createDeferredPromise(),
       });
 
       const dataPromises = subscriptionValue.dataPromises;
@@ -246,55 +266,57 @@ export function RedisPubSub({
       await dataPromise.unsubscribe();
     }
 
-    return {
-      get ready() {
-        const channel = name;
-        return (subscriptionsMap[channel] ||= {
-          dataPromises: new Set<DataPromise>(),
-          name,
-          specifier: undefined,
-          channel,
-          schema,
-          ready: createDeferredPromise(),
-        }).ready.promise;
-      },
-      subscribe,
-      async publish(
-        ...values: [
-          { value: Value; specifier?: string | number },
-          ...{ value: Value; specifier?: string | number }[]
-        ]
-      ) {
-        await Promise.all(
-          values.map(async ({ value, specifier }) => {
-            let parsedValue: Value;
+    async function isReady(
+      channel?: { specifier?: string | number },
+      ...channels: Array<{ specifier?: string | number } | undefined>
+    ) {
+      await Promise.all(
+        [channel, ...channels].map(({ specifier } = {}) => {
+          const channel = specifier ? name + specifier : name;
 
-            try {
-              parsedValue = await schema.parseAsync(value);
-            } catch (err) {
-              onParseError(err);
-              return;
-            }
+          return getSubscriptionValue({
+            name,
+            channel,
+            specifier,
+          }).ready.promise;
+        })
+      );
+    }
 
-            await publisher.publish(specifier ? name + specifier : name, stringify(parsedValue));
-          })
-        );
-      },
-      async unsubscribeAll() {
-        const subscriptions = Object.values(subscriptionsMap).filter(
-          (value) => value.name === name
-        );
+    async function publish(
+      ...values: [
+        { value: Value; specifier?: string | number },
+        ...{ value: Value; specifier?: string | number }[]
+      ]
+    ) {
+      await Promise.all(
+        values.map(async ({ value, specifier }) => {
+          let parsedValue: Value;
 
-        await Promise.all(
-          subscriptions.flatMap(({ dataPromises, channel }) => [
-            ...Array.from(dataPromises).map(({ unsubscribe }) => unsubscribe()),
-            redisUnsubscribe({
-              channel,
-            }),
-          ])
-        );
-      },
-    };
+          try {
+            parsedValue = await schema.parseAsync(value);
+          } catch (err) {
+            onParseError(err);
+            return;
+          }
+
+          await publisher.publish(specifier ? name + specifier : name, stringify(parsedValue));
+        })
+      );
+    }
+
+    async function unsubscribeAll() {
+      const subscriptions = Object.values(subscriptionsMap).filter((value) => value.name === name);
+
+      await Promise.all(
+        subscriptions.flatMap(({ dataPromises, channel }) => [
+          ...Array.from(dataPromises).map(({ unsubscribe }) => unsubscribe()),
+          redisUnsubscribe({
+            channel,
+          }),
+        ])
+      );
+    }
   }
 
   async function close() {
