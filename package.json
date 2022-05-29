@@ -26,9 +26,9 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "c8 ava",
+    "test": "c8 --include=src --exclude=src/promise.ts ava",
     "test:watch": "ava --watch",
-    "test:watch:coverage": "bob-watch -w src test -c \"c8 ava\""
+    "test:watch:coverage": "bob-watch -w src test package.json -c \"pnpm test\""
   },
   "dependencies": {
     "superjson": "^1.9.1"
