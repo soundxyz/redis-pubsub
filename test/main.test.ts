@@ -345,70 +345,6 @@ test("filter works as expected", async (t) => {
   t.is(await subscription2, 2);
 });
 
-test("pattern with specifier works as expected", async (t) => {
-  const firstMessageChannel = createDeferredPromise<string>(1000);
-  const secondMessageChannel = createDeferredPromise<string>(1000);
-
-  const { createChannel, close, subscriber } = getPubsub();
-
-  t.teardown(close);
-
-  let messageNumber = 0;
-  const onPMessage = (pattern: string | undefined, channel: string, message: string) => {
-    t.is(pattern, "test:*");
-    switch (++messageNumber) {
-      case 1:
-        t.is(message, stringify(1));
-        return firstMessageChannel.resolve(channel);
-      case 2:
-        t.is(message, stringify(2));
-        return secondMessageChannel.resolve(channel);
-      default:
-        throw Error("Unexpected message");
-    }
-  };
-
-  subscriber.on("pmessage", onPMessage);
-  t.teardown(() => subscriber.off("pmessage", onPMessage));
-
-  const channel = createChannel({
-    name: "test:",
-    subscriptionPattern: "test:*",
-    schema: z.number(),
-    isLazy: false,
-  });
-
-  const subscription = (async () => {
-    const values: number[] = [];
-    for await (const value of channel.subscribe()) {
-      values.push(value);
-      if (values.length === 2) return values;
-    }
-  })();
-
-  await channel.ready;
-
-  await channel.publish({
-    value: 1,
-    specifier: "1",
-  });
-
-  t.is(await firstMessageChannel.promise, "test:1");
-
-  await channel.publish({
-    value: 2,
-    specifier: "2",
-  });
-
-  t.is(await secondMessageChannel.promise, "test:2");
-
-  t.is(messageNumber, 2);
-
-  t.deepEqual(await subscription, [1, 2]);
-
-  await channel.unsubscribeAll();
-});
-
 test("publish without subscriptions", async (t) => {
   const { createChannel, close, subscriber } = getPubsub();
 
@@ -432,6 +368,7 @@ test("publish without subscriptions", async (t) => {
 
   t.teardown(() => subscriber.off("message", onMessage));
 
+  await channel.ready;
   await channel.publish({
     value: "hello world",
   });

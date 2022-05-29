@@ -1,7 +1,12 @@
 import type { Redis } from "ioredis";
-import { stringify, parse } from "superjson";
+import { parse, stringify } from "superjson";
 import type { ZodSchema } from "zod";
-import { createDeferredPromise, PubSubDeferredPromise, pubsubDeferredPromise } from "./promise";
+import {
+  createDeferredPromise,
+  DeferredPromise,
+  PubSubDeferredPromise,
+  pubsubDeferredPromise,
+} from "./promise";
 
 export interface RedisPubSubOptions {
   publisher: Redis;
@@ -18,21 +23,17 @@ export function RedisPubSub({
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
   };
-  type SubscriptionValue = Readonly<{
-    name: string;
-    channel: string;
-    isPattern: boolean;
-    schema: ZodSchema<unknown>;
-    dataPromises: Set<DataPromise>;
-    ready: Promise<void>;
-  }>;
+  type SubscriptionValue = {
+    readonly name: string;
+    readonly specifier: string | undefined;
+    readonly channel: string;
+    readonly schema: ZodSchema<unknown>;
+    readonly dataPromises: Set<DataPromise>;
+    ready: DeferredPromise<void>;
+  };
   const subscriptionsMap: Record<string, SubscriptionValue> = {};
 
-  const onPMessageHandler = onMessage.bind(void 0);
-  const onMessageHandler = onMessage.bind(void 0, undefined);
-
-  subscriber.on("pmessage", onPMessageHandler);
-  subscriber.on("message", onMessageHandler);
+  subscriber.on("message", onMessage);
 
   const subscribedChannels: Record<string, boolean | Promise<void>> = {};
   const unsubscribingChannels: Record<string, Promise<void> | false> = {};
@@ -43,8 +44,8 @@ export function RedisPubSub({
     close,
   };
 
-  async function onMessage(pattern: string | undefined, channel: string, message: string) {
-    const subscription = subscriptionsMap[pattern || channel];
+  async function onMessage(channel: string, message: string) {
+    const subscription = subscriptionsMap[channel];
 
     if (!subscription?.dataPromises.size) return;
 
@@ -63,7 +64,7 @@ export function RedisPubSub({
     }
   }
 
-  function redisSubscribe({ channel, isPattern }: { channel: string; isPattern: boolean }) {
+  function redisSubscribe({ channel }: { channel: string }) {
     const subscribed = subscribedChannels[channel];
 
     if (subscribed) {
@@ -71,9 +72,7 @@ export function RedisPubSub({
 
       return subscribed;
     }
-    return (subscribedChannels[channel] = subscriber[isPattern ? "psubscribe" : "subscribe"](
-      channel
-    ).then(
+    return (subscribedChannels[channel] = subscriber.subscribe(channel).then(
       () => {
         subscribedChannels[channel] = true;
       },
@@ -85,7 +84,7 @@ export function RedisPubSub({
     ));
   }
 
-  function redisUnsubscribe({ channel, isPattern }: { channel: string; isPattern: boolean }) {
+  function redisUnsubscribe({ channel }: { channel: string }) {
     const unsubscribing = unsubscribingChannels[channel];
 
     if (unsubscribing) return unsubscribing;
@@ -101,9 +100,7 @@ export function RedisPubSub({
     return subcribed.then(unsubscribe);
 
     function unsubscribe() {
-      return (unsubscribingChannels[channel] = subscriber[
-        isPattern ? "punsubscribe" : "unsubscribe"
-      ](channel).then(
+      return (unsubscribingChannels[channel] = subscriber.unsubscribe(channel).then(
         () => {
           unsubscribingChannels[channel] = subscribedChannels[channel] = false;
         },
@@ -116,15 +113,15 @@ export function RedisPubSub({
   }
 
   async function unsubscribeAll() {
+    const subscriptions = Object.values(subscriptionsMap);
+
     await Promise.all(
-      Object.values(subscriptionsMap).map(({ dataPromises, name: channel, isPattern }) =>
-        Promise.all(Array.from(dataPromises).map((v) => v.unsubscribe())).then(() =>
-          redisUnsubscribe({
-            channel,
-            isPattern,
-          })
-        )
-      )
+      subscriptions.flatMap(({ dataPromises, channel }) => [
+        ...Array.from(dataPromises).map(({ unsubscribe }) => unsubscribe()),
+        redisUnsubscribe({
+          channel,
+        }),
+      ])
     );
   }
 
@@ -132,75 +129,68 @@ export function RedisPubSub({
     schema,
     name,
     isLazy = true,
-    subscriptionPattern,
   }: {
     schema: ZodSchema<Value>;
-    /**
-     * Channel name
-     *
-     * For publish:
-     * - If `specifier` argument **is not** specified on `.publish`, it's used as channel trigger
-     * - If `specifier` argument **is** specified on `.publish`, it's used as a prefix of the `specifier` in the channel trigger
-     *
-     * For subscription:
-     * - If `subscriptionPattern` **is not** specified, it's used as channel trigger on `.subscribe`
-     * - If `subscriptionPattern` **is** specified, it's overriden by it
-     */
     name: string;
-    /**
-     * Subscription trigger pattern to be used on subscription, overrides `name` on `.subscribe`
-     */
-    subscriptionPattern?: string;
     /**
      * @default true
      */
     isLazy?: boolean;
   }) {
-    const channel = subscriptionPattern ?? name;
-    const isPattern = subscriptionPattern != null;
-
-    const dataPromises = new Set<DataPromise>();
-
-    let readyPromise = createDeferredPromise();
-
     if (!isLazy) {
+      const channel = name;
+      const initialSubscriptionValue = (subscriptionsMap[name] = {
+        dataPromises: new Set<DataPromise>(),
+        name,
+        channel,
+        specifier: undefined,
+        schema,
+        ready: createDeferredPromise(),
+      });
       redisSubscribe({
         channel,
-        isPattern,
-      })?.then(readyPromise.resolve, readyPromise.reject);
+      })?.then(initialSubscriptionValue.ready.resolve, initialSubscriptionValue.ready.reject);
     }
-
-    const subscriptionValue = (subscriptionsMap[channel] = {
-      dataPromises,
-      name,
-      channel,
-      schema,
-      ready: readyPromise.promise,
-      isPattern,
-    });
 
     function subscribe<FilteredValue extends Value>(subscribeArguments: {
       abortSignal?: AbortSignal;
       filter: (value: Value) => value is FilteredValue;
+      specifier?: string;
     }): AsyncGenerator<FilteredValue, void, unknown>;
     function subscribe(subscribeArguments?: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
+      specifier?: string;
     }): AsyncGenerator<Value, void, unknown>;
     async function* subscribe({
       abortSignal,
       filter,
+      specifier,
     }: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
+      specifier?: string;
     } = {}) {
+      const channel = specifier ? name + specifier : name;
+
+      const subscriptionValue = (subscriptionsMap[channel] ||= {
+        schema,
+        name,
+        specifier,
+        channel,
+        dataPromises: new Set(),
+        ready: createDeferredPromise(),
+      });
+
+      const dataPromises = subscriptionValue.dataPromises;
+
       let abortListener: (() => void) | undefined;
 
       if (abortSignal) {
         abortSignal.addEventListener(
           "abort",
           (abortListener = () => {
-            unsubscribe().catch((err) => readyPromise.reject(err));
+            unsubscribe().catch((err) => subscriptionValue.ready.reject(err));
           })
         );
       }
@@ -220,12 +210,10 @@ export function RedisPubSub({
         }
 
         if (isLazy && dataPromises.size === 0) {
-          readyPromise = createDeferredPromise();
-          subscriptionValue.ready = readyPromise.promise;
+          subscriptionValue.ready = createDeferredPromise();
 
           await redisUnsubscribe({
             channel,
-            isPattern: false,
           });
           return;
         }
@@ -235,8 +223,7 @@ export function RedisPubSub({
 
       const subscribing = redisSubscribe({
         channel,
-        isPattern,
-      })?.then(readyPromise.resolve, readyPromise.reject);
+      })?.then(subscriptionValue.ready.resolve, subscriptionValue.ready.reject);
 
       if (subscribing) await subscribing;
 
@@ -261,7 +248,15 @@ export function RedisPubSub({
 
     return {
       get ready() {
-        return readyPromise.promise;
+        const channel = name;
+        return (subscriptionsMap[channel] ||= {
+          dataPromises: new Set<DataPromise>(),
+          name,
+          specifier: undefined,
+          channel,
+          schema,
+          ready: createDeferredPromise(),
+        }).ready.promise;
       },
       subscribe,
       async publish(
@@ -283,18 +278,24 @@ export function RedisPubSub({
         );
       },
       async unsubscribeAll() {
-        await Promise.all(Array.from(dataPromises.values()).map((v) => v.unsubscribe()));
-        await redisUnsubscribe({
-          channel,
-          isPattern,
-        });
+        const subscriptions = Object.values(subscriptionsMap).filter(
+          (value) => value.name === name
+        );
+
+        await Promise.all(
+          subscriptions.flatMap(({ dataPromises, channel }) => [
+            ...Array.from(dataPromises).map(({ unsubscribe }) => unsubscribe()),
+            redisUnsubscribe({
+              channel,
+            }),
+          ])
+        );
       },
     };
   }
 
   async function close() {
-    subscriber.off("pmessage", onPMessageHandler);
-    subscriber.off("message", onMessageHandler);
+    subscriber.off("message", onMessage);
 
     await unsubscribeAll();
 
