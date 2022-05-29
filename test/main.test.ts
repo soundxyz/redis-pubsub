@@ -57,14 +57,14 @@ test("subscribe/unsubscribe and abort controller", async (t) => {
 
   await channel.ready;
 
-  await Promise.all([channel.publish("1", "2", "3")]);
+  await Promise.all([channel.publish({ value: "1" }, { value: "2" }, { value: "3" })]);
 
   await waitForExpect(() => {
     t.deepEqual(firstSubscribeValues, ["1", "2", "3"]);
     t.deepEqual(secondSubscribeValues, ["1", "2", "3"]);
   });
 
-  await Promise.all([channel.publish("4")]);
+  await Promise.all([channel.publish({ value: "4" })]);
 
   await waitForExpect(() => {
     t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
@@ -75,7 +75,7 @@ test("subscribe/unsubscribe and abort controller", async (t) => {
 
   await firstSubscribe;
 
-  await channel.publish("5");
+  await channel.publish({ value: "5" });
 
   await waitForExpect(() => {
     t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
@@ -88,7 +88,7 @@ test("subscribe/unsubscribe and abort controller", async (t) => {
 
   await secondSubscribe;
 
-  await channel.publish("6");
+  await channel.publish({ value: "6" });
 
   t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
   t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4", "5"]);
@@ -110,10 +110,10 @@ test("parse error on publish", async (t) => {
     name: "test",
   });
 
-  await channel.publish(
-    //@ts-expect-error
-    123
-  );
+  await channel.publish({
+    // @ts-expect-error
+    value: 123,
+  });
 
   t.assert(receivedError instanceof ZodError);
   assert(receivedError instanceof ZodError);
@@ -180,7 +180,7 @@ test("internal publish error", async (t) => {
     name: "test",
   });
 
-  const publishError = await channel.publish("noop").then(
+  const publishError = await channel.publish({ value: "noop" }).then(
     () => Error("Unexpected error"),
     (err) => err
   );
@@ -208,7 +208,7 @@ test("internal subscribe error", async (t) => {
   const channel = createChannel({
     schema: z.string(),
     name: "test",
-    lazy: false,
+    isLazy: false,
   });
 
   const subscribeError = await channel.ready.then(
@@ -242,7 +242,7 @@ test("internal unsubscribe error", async (t) => {
   const channel = createChannel({
     schema: z.string(),
     name: "test",
-    lazy: false,
+    isLazy: false,
   });
 
   await channel.ready;
@@ -291,11 +291,153 @@ test("unsubscribe while still subscribing", async (t) => {
   const channel = createChannel({
     name: "test",
     schema: z.string(),
-    lazy: false,
+    isLazy: false,
   });
 
   await Promise.all([channel.unsubscribeAll(), channel.ready]);
 
   t.is(didSubscribeEnd, true);
   await close();
+});
+
+test("filter works as expected", async (t) => {
+  const { createChannel, close } = getPubsub();
+
+  t.teardown(close);
+
+  const channel = createChannel({
+    name: "test",
+    schema: z.number(),
+    isLazy: false,
+  });
+
+  await channel.ready;
+
+  const subscription1 = (async () => {
+    for await (const value of channel.subscribe({
+      filter(value): value is 1 {
+        return value === 1;
+      },
+    })) {
+      return value;
+    }
+  })();
+
+  const subscription2 = (async () => {
+    for await (const value of channel.subscribe({
+      filter(value): value is 2 {
+        return value === 2;
+      },
+    })) {
+      return value;
+    }
+  })();
+
+  await channel.publish({
+    value: 1,
+  });
+
+  await channel.publish({
+    value: 2,
+  });
+
+  t.is(await subscription1, 1);
+  t.is(await subscription2, 2);
+});
+
+test("pattern with specifier works as expected", async (t) => {
+  const firstMessageChannel = createDeferredPromise<string>(1000);
+  const secondMessageChannel = createDeferredPromise<string>(1000);
+
+  const { createChannel, close, subscriber } = getPubsub();
+
+  t.teardown(close);
+
+  let messageNumber = 0;
+  const onPMessage = (pattern: string | undefined, channel: string, message: string) => {
+    t.is(pattern, "test:*");
+    switch (++messageNumber) {
+      case 1:
+        t.is(message, stringify(1));
+        return firstMessageChannel.resolve(channel);
+      case 2:
+        t.is(message, stringify(2));
+        return secondMessageChannel.resolve(channel);
+      default:
+        throw Error("Unexpected message");
+    }
+  };
+
+  subscriber.on("pmessage", onPMessage);
+  t.teardown(() => subscriber.off("pmessage", onPMessage));
+
+  const channel = createChannel({
+    name: "test:",
+    subscriptionPattern: "test:*",
+    schema: z.number(),
+    isLazy: false,
+  });
+
+  const subscription = (async () => {
+    const values: number[] = [];
+    for await (const value of channel.subscribe()) {
+      values.push(value);
+      if (values.length === 2) return values;
+    }
+  })();
+
+  await channel.ready;
+
+  await channel.publish({
+    value: 1,
+    specifier: "1",
+  });
+
+  t.is(await firstMessageChannel.promise, "test:1");
+
+  await channel.publish({
+    value: 2,
+    specifier: "2",
+  });
+
+  t.is(await secondMessageChannel.promise, "test:2");
+
+  t.is(messageNumber, 2);
+
+  t.deepEqual(await subscription, [1, 2]);
+
+  await channel.unsubscribeAll();
+});
+
+test("publish without subscriptions", async (t) => {
+  const { createChannel, close, subscriber } = getPubsub();
+
+  t.teardown(close);
+
+  const channel = createChannel({
+    schema: z.string(),
+    name: "test",
+    isLazy: false,
+  });
+
+  const messagePromise = createDeferredPromise<{
+    channel: string;
+    message: string;
+  }>(1000);
+
+  function onMessage(channel: string, message: string) {
+    messagePromise.resolve({ channel, message });
+  }
+  subscriber.on("message", onMessage);
+
+  t.teardown(() => subscriber.off("message", onMessage));
+
+  await channel.publish({
+    value: "hello world",
+  });
+
+  t.deepEqual(await messagePromise.promise, {
+    channel: "test",
+    message: stringify("hello world"),
+  });
 });
