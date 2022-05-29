@@ -77,7 +77,7 @@ const nonLazyUserChannel = createChannel({
   name: "User",
   schema,
   // By default the channels are lazily connected with redis
-  lazy: false,
+  isLazy: false,
 });
 ```
 
@@ -176,6 +176,27 @@ await userChannel.publish({
   },
   identifier: 1,
 });
+```
+
+### Use AbortController / AbortSignal
+
+If `isLazy` is **not** disabled, the last subscription to a channel will be automatically unsubscribed from **Redis**.
+
+```ts
+const abortController = new AbortController();
+const abortedSubscription = (() => {
+  for await (const data of userChannel.subscribe({
+    abortSignal: abortController.signal,
+  })) {
+    console.log({ data });
+  }
+})();
+
+// ...
+
+firstSubscribeAbortController.abort();
+
+await abortedSubscription;
 ```
 
 ### Unsubscribe specific identifiers
