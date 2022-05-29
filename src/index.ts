@@ -152,6 +152,7 @@ export function RedisPubSub({
     return {
       isReady,
       subscribe,
+      unsubscribe,
       publish,
       unsubscribeAll,
     };
@@ -264,6 +265,28 @@ export function RedisPubSub({
       }
 
       await dataPromise.unsubscribe();
+    }
+
+    async function unsubscribe(
+      channel?: { identifier?: string | number },
+      ...channels: Array<{ identifier?: string | number } | undefined>
+    ) {
+      await Promise.all(
+        [channel, ...channels].flatMap(({ identifier } = {}) => {
+          const channel = identifier ? name + identifier : name;
+
+          const subscriptionValue = subscriptionsMap[channel];
+
+          if (!subscriptionValue?.dataPromises.size) return;
+
+          return [
+            ...Array.from(subscriptionValue.dataPromises).map((v) => v.unsubscribe()),
+            redisUnsubscribe({
+              channel,
+            }),
+          ];
+        })
+      );
     }
 
     async function isReady(

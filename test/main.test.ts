@@ -383,6 +383,8 @@ test("publish without subscriptions", async (t) => {
 test("subscribe and publish with specifiers", async (t) => {
   const pubSub = getPubsub();
 
+  t.teardown(pubSub.close);
+
   const channel = pubSub.createChannel({
     name: "test-specifier:",
     schema: z.string(),
@@ -425,4 +427,62 @@ test("subscribe and publish with specifiers", async (t) => {
   );
 
   t.deepEqual(await Promise.all([subscription1, subscription2]), ["1", "2"]);
+});
+
+test("unsubscribe specific channels", async (t) => {
+  const { close, createChannel } = getPubsub();
+
+  t.teardown(close);
+
+  const channel = createChannel({
+    name: "test",
+    schema: z.string(),
+  });
+
+  const subscription1 = (async () => {
+    for await (const value of channel.subscribe()) {
+      return value;
+    }
+  })();
+
+  const subscription2 = (async () => {
+    for await (const value of channel.subscribe({
+      identifier: 1,
+    })) {
+      return value;
+    }
+  })();
+
+  await channel.isReady(
+    {},
+    {
+      identifier: 1,
+    }
+  );
+
+  await channel.unsubscribe(
+    {},
+    {
+      identifier: 1,
+    },
+    {
+      identifier: 2,
+    }
+  );
+
+  await channel.publish(
+    {
+      value: "Unexpected value",
+    },
+    {
+      value: "Unexpected value",
+      identifier: 1,
+    },
+    {
+      value: "Unexpected value",
+      identifier: 2,
+    }
+  );
+
+  t.deepEqual(await Promise.all([subscription1, subscription2]), [undefined, undefined]);
 });
