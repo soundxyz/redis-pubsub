@@ -3,18 +3,17 @@ import { stringify, parse } from "superjson";
 import type { ZodSchema } from "zod";
 import { createDeferredPromise, PubSubDeferredPromise, pubsubDeferredPromise } from "./promise";
 
-export function RedisPubSub(
-  this: unknown,
-  {
-    publisher,
-    subscriber,
-    onParseError = console.error,
-  }: {
-    publisher: Redis;
-    subscriber: Redis;
-    onParseError?: (err: unknown) => void;
-  }
-) {
+export interface RedisPubSubOptions {
+  publisher: Redis;
+  subscriber: Redis;
+  onParseError?: (err: unknown) => void;
+}
+
+export function RedisPubSub({
+  publisher,
+  subscriber,
+  onParseError = console.error,
+}: RedisPubSubOptions) {
   type DataPromiseRef = {
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
@@ -27,8 +26,8 @@ export function RedisPubSub(
   }>;
   const subscriptionsMap: Record<string, SubscriptionValue> = {};
 
-  const onPMessageHandler = onMessage.bind(this);
-  const onMessageHandler = onMessage.bind(this, undefined);
+  const onPMessageHandler = onMessage.bind(void 0);
+  const onMessageHandler = onMessage.bind(void 0, undefined);
 
   subscriber.on("pmessage", onPMessageHandler);
   subscriber.on("message", onMessageHandler);
