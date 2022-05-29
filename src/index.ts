@@ -25,7 +25,7 @@ export function RedisPubSub({
   }
   interface SubscriptionValue {
     readonly name: string;
-    readonly specifier: string | undefined;
+    readonly identifier: string | undefined;
     readonly channel: string;
     readonly schema: ZodSchema<unknown>;
     readonly dataPromises: Set<DataPromise>;
@@ -142,7 +142,7 @@ export function RedisPubSub({
       const initialSubscriptionValue = getSubscriptionValue({
         name,
         channel,
-        specifier: undefined,
+        identifier: undefined,
       });
       redisSubscribe({
         channel,
@@ -159,17 +159,17 @@ export function RedisPubSub({
     function getSubscriptionValue({
       name,
       channel,
-      specifier,
+      identifier,
     }: {
       name: string;
       channel: string;
-      specifier: string | number | undefined;
+      identifier: string | number | undefined;
     }) {
       return (subscriptionsMap[channel] ||= {
         dataPromises: new Set<DataPromise>(),
         name,
         channel,
-        specifier: specifier?.toString(),
+        identifier: identifier?.toString(),
         schema,
         ready: createDeferredPromise(),
       });
@@ -178,27 +178,27 @@ export function RedisPubSub({
     function subscribe<FilteredValue extends Value>(subscribeArguments: {
       abortSignal?: AbortSignal;
       filter: (value: Value) => value is FilteredValue;
-      specifier?: string | number;
+      identifier?: string | number;
     }): AsyncGenerator<FilteredValue, void, unknown>;
     function subscribe(subscribeArguments?: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
-      specifier?: string | number;
+      identifier?: string | number;
     }): AsyncGenerator<Value, void, unknown>;
     async function* subscribe({
       abortSignal,
       filter,
-      specifier,
+      identifier,
     }: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
-      specifier?: string | number;
+      identifier?: string | number;
     } = {}) {
-      const channel = specifier ? name + specifier : name;
+      const channel = identifier ? name + identifier : name;
 
       const subscriptionValue = getSubscriptionValue({
         name,
-        specifier,
+        identifier,
         channel,
       });
 
@@ -267,17 +267,17 @@ export function RedisPubSub({
     }
 
     async function isReady(
-      channel?: { specifier?: string | number },
-      ...channels: Array<{ specifier?: string | number } | undefined>
+      channel?: { identifier?: string | number },
+      ...channels: Array<{ identifier?: string | number } | undefined>
     ) {
       await Promise.all(
-        [channel, ...channels].map(({ specifier } = {}) => {
-          const channel = specifier ? name + specifier : name;
+        [channel, ...channels].map(({ identifier } = {}) => {
+          const channel = identifier ? name + identifier : name;
 
           return getSubscriptionValue({
             name,
             channel,
-            specifier,
+            identifier,
           }).ready.promise;
         })
       );
@@ -285,12 +285,12 @@ export function RedisPubSub({
 
     async function publish(
       ...values: [
-        { value: Value; specifier?: string | number },
-        ...{ value: Value; specifier?: string | number }[]
+        { value: Value; identifier?: string | number },
+        ...{ value: Value; identifier?: string | number }[]
       ]
     ) {
       await Promise.all(
-        values.map(async ({ value, specifier }) => {
+        values.map(async ({ value, identifier }) => {
           let parsedValue: Value;
 
           try {
@@ -300,7 +300,7 @@ export function RedisPubSub({
             return;
           }
 
-          await publisher.publish(specifier ? name + specifier : name, stringify(parsedValue));
+          await publisher.publish(identifier ? name + identifier : name, stringify(parsedValue));
         })
       );
     }

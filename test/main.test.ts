@@ -390,7 +390,7 @@ test("subscribe and publish with specifiers", async (t) => {
 
   const subscription1 = (async () => {
     for await (const data of channel.subscribe({
-      specifier: 1,
+      identifier: 1,
     })) {
       return data;
     }
@@ -398,7 +398,7 @@ test("subscribe and publish with specifiers", async (t) => {
 
   const subscription2 = (async () => {
     for await (const data of channel.subscribe({
-      specifier: 2,
+      identifier: 2,
     })) {
       return data;
     }
@@ -406,20 +406,20 @@ test("subscribe and publish with specifiers", async (t) => {
 
   await channel.isReady(
     {
-      specifier: 1,
+      identifier: 1,
     },
     {
-      specifier: 2,
+      identifier: 2,
     }
   );
 
   await channel.publish(
     {
-      specifier: 1,
+      identifier: 1,
       value: "1",
     },
     {
-      specifier: 2,
+      identifier: 2,
       value: "2",
     }
   );
