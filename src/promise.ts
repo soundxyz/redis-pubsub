@@ -58,8 +58,10 @@ export interface DeferredPromise<T> {
   };
 }
 
-export function createDeferredPromise<T = void>(): DeferredPromise<T> {
+export function createDeferredPromise<T = void>(timeoutTime?: number): DeferredPromise<T> {
   const resolve = (value: T) => {
+    timeout != null && clearTimeout(timeout);
+
     valueRef.current ||= { status: "fulfilled", value };
 
     middlePromiseResolve({
@@ -69,6 +71,8 @@ export function createDeferredPromise<T = void>(): DeferredPromise<T> {
   };
 
   const reject = (err: unknown) => {
+    timeout != null && clearTimeout(timeout);
+
     valueRef.current ||= { status: "rejected", reason: err };
 
     middlePromiseResolve({
@@ -94,6 +98,13 @@ export function createDeferredPromise<T = void>(): DeferredPromise<T> {
 
     throw value;
   });
+
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  if (timeoutTime != null) {
+    timeout = setTimeout(() => {
+      reject(Error(`Timed out after ${timeoutTime}ms.`));
+    }, timeoutTime);
+  }
 
   return {
     promise,
