@@ -14,14 +14,14 @@ export function RedisPubSub({
   subscriber,
   onParseError = console.error,
 }: RedisPubSubOptions) {
-  type DataPromiseRef = {
+  type DataPromise = {
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
   };
   type SubscriptionValue = Readonly<{
     channel: string;
     schema: ZodSchema<unknown>;
-    dataPromises: Set<DataPromiseRef>;
+    dataPromises: Set<DataPromise>;
     ready: Promise<void>;
   }>;
   const subscriptionsMap: Record<string, SubscriptionValue> = {};
@@ -138,7 +138,7 @@ export function RedisPubSub({
      */
     lazy?: boolean;
   }) {
-    const dataPromises = new Set<DataPromiseRef>();
+    const dataPromises = new Set<DataPromise>();
 
     let readyPromise = createDeferredPromise();
 
@@ -171,35 +171,38 @@ export function RedisPubSub({
           abortSignal.addEventListener(
             "abort",
             (abortListener = () => {
-              valuePromiseRef.unsubscribe();
+              unsubscribe().catch((err) => readyPromise.reject(err));
             })
           );
         }
-        const valuePromiseRef: DataPromiseRef = {
-          current: pubsubDeferredPromise() as PubSubDeferredPromise<unknown>,
-          async unsubscribe() {
-            valuePromiseRef.current.isDone = true;
-            valuePromiseRef.current.resolve();
-            dataPromises.delete(valuePromiseRef);
 
-            if (abortSignal && abortListener) {
-              abortSignal.removeEventListener("abort", abortListener);
-            }
-
-            if (lazy && dataPromises.size === 0) {
-              await redisUnsubscribe({
-                channel: name,
-                pattern: false,
-              });
-
-              readyPromise = createDeferredPromise();
-              subscriptionValue.ready = readyPromise.promise;
-              return;
-            }
-          },
+        const dataPromise: DataPromise = {
+          current: pubsubDeferredPromise(),
+          unsubscribe,
         };
 
-        dataPromises.add(valuePromiseRef);
+        async function unsubscribe() {
+          dataPromise.current.isDone = true;
+          dataPromise.current.resolve();
+          dataPromises.delete(dataPromise);
+
+          if (abortSignal && abortListener) {
+            abortSignal.removeEventListener("abort", abortListener);
+          }
+
+          if (lazy && dataPromises.size === 0) {
+            readyPromise = createDeferredPromise();
+            subscriptionValue.ready = readyPromise.promise;
+
+            await redisUnsubscribe({
+              channel: name,
+              pattern: false,
+            });
+            return;
+          }
+        }
+
+        dataPromises.add(dataPromise);
 
         const subscribing = redisSubscribe({
           channel: name,
@@ -208,20 +211,19 @@ export function RedisPubSub({
 
         if (subscribing) await subscribing;
 
-        let valuePromise: DataPromiseRef | null = valuePromiseRef;
-        while (valuePromise) {
-          await valuePromise.current.promise;
+        while (true) {
+          await dataPromise.current.promise;
 
-          for (const value of valuePromise.current.values as Output[]) yield value;
+          for (const value of dataPromise.current.values as Output[]) yield value;
 
-          if (valuePromise.current.isDone) {
-            valuePromise = null;
+          if (dataPromise.current.isDone) {
+            break;
           } else {
-            valuePromise.current = pubsubDeferredPromise();
+            dataPromise.current = pubsubDeferredPromise();
           }
         }
 
-        await valuePromiseRef.unsubscribe();
+        await dataPromise.unsubscribe();
       },
       async publish(...values: [Output, ...Output[]]) {
         await Promise.all(
