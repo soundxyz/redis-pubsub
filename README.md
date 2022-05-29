@@ -72,6 +72,13 @@ const userChannel = createChannel({
   name: "User",
   schema,
 });
+
+const nonLazyUserChannel = createChannel({
+  name: "User",
+  schema,
+  // By default the channels are lazily connected with redis
+  lazy: false,
+});
 ```
 
 ### Subscribe and publish to the channel
