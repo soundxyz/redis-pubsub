@@ -155,12 +155,12 @@ export function RedisPubSub({
     function subscribe<FilteredValue extends Value>(subscribeArguments: {
       abortSignal?: AbortSignal;
       filter: (value: Value) => value is FilteredValue;
-      specifier?: string;
+      specifier?: string | number;
     }): AsyncGenerator<FilteredValue, void, unknown>;
     function subscribe(subscribeArguments?: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
-      specifier?: string;
+      specifier?: string | number;
     }): AsyncGenerator<Value, void, unknown>;
     async function* subscribe({
       abortSignal,
@@ -169,14 +169,14 @@ export function RedisPubSub({
     }: {
       abortSignal?: AbortSignal;
       filter?: (value: Value) => unknown;
-      specifier?: string;
+      specifier?: string | number;
     } = {}) {
       const channel = specifier ? name + specifier : name;
 
       const subscriptionValue = (subscriptionsMap[channel] ||= {
         schema,
         name,
-        specifier,
+        specifier: specifier?.toString(),
         channel,
         dataPromises: new Set(),
         ready: createDeferredPromise(),
@@ -260,7 +260,10 @@ export function RedisPubSub({
       },
       subscribe,
       async publish(
-        ...values: [{ value: Value; specifier?: string }, ...{ value: Value; specifier?: string }[]]
+        ...values: [
+          { value: Value; specifier?: string | number },
+          ...{ value: Value; specifier?: string | number }[]
+        ]
       ) {
         await Promise.all(
           values.map(async ({ value, specifier }) => {
