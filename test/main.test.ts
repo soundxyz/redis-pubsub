@@ -2,6 +2,7 @@ import assert from "assert";
 import test from "ava";
 import Redis from "ioredis";
 import { stringify } from "superjson";
+import { setTimeout } from "timers/promises";
 import waitForExpect from "wait-for-expect";
 import { z, ZodError } from "zod";
 import { RedisPubSub, RedisPubSubOptions } from "../src";
@@ -377,4 +378,46 @@ test("publish without subscriptions", async (t) => {
     channel: "test",
     message: stringify("hello world"),
   });
+});
+
+test("subscribe and publish with specifiers", async (t) => {
+  const pubSub = getPubsub();
+
+  const channel = pubSub.createChannel({
+    name: "test-specifier:",
+    schema: z.string(),
+  });
+
+  const subscription1 = (async () => {
+    for await (const data of channel.subscribe({
+      specifier: 1,
+    })) {
+      return data;
+    }
+  })();
+
+  const subscription2 = (async () => {
+    for await (const data of channel.subscribe({
+      specifier: 2,
+    })) {
+      return data;
+    }
+  })();
+
+  // TODO: Support ready on specifier
+  await setTimeout(100);
+
+  await Promise.all([
+    channel.publish({
+      specifier: 1,
+      value: "1",
+    }),
+    channel.publish({
+      specifier: 2,
+      value: "2",
+    }),
+  ]);
+
+  t.is(await subscription1, "1");
+  t.is(await subscription2, "2");
 });
