@@ -8,6 +8,10 @@
     "pubsub",
     "graphql"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soundxyz/redis-pubsub.git"
+  },
   "license": "MIT",
   "author": "PabloSzx <pablosaez1995@gmail.com>",
   "exports": {
