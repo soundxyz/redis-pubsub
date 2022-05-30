@@ -2,6 +2,9 @@
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
 
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "importsNotUsedAsValues": "error",
     /* Projects */
     // "incremental": true,                              /* Save .tsbuildinfo files to allow for incremental compilation of projects. */
     // "composite": true,                                /* Enable constraints that allow a TypeScript project to be used with project references. */
@@ -9,7 +12,6 @@
     // "disableSourceOfProjectReferenceRedirect": true,  /* Disable preferring source files instead of declaration files when referencing composite projects. */
     // "disableSolutionSearching": true,                 /* Opt a project out of multi-project reference checking when editing. */
     // "disableReferencedProjectLoad": true,             /* Reduce the number of projects loaded automatically by TypeScript. */
-
     /* Language and Environment */
     "target": "esnext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
     // "lib": [],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
@@ -23,7 +25,8 @@
     // "noLib": true,                                    /* Disable including any library files, including the default lib.d.ts. */
     // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
-
+    // "emitDeclarationOnly": true,
+    "noEmit": true,
     /* Modules */
     "module": "esnext" /* Specify what module code is generated. */,
     // "rootDir": "./",                                  /* Specify the root folder within your source files. */
@@ -44,7 +47,7 @@
     // "maxNodeModuleJsDepth": 1,                        /* Specify the maximum folder depth used for checking JavaScript files from 'node_modules'. Only applicable with 'allowJs'. */
 
     /* Emit */
-    // "declaration": true,                              /* Generate .d.ts files from TypeScript and JavaScript files in your project. */
+    "declaration": true /* Generate .d.ts files from TypeScript and JavaScript files in your project. */,
     // "declarationMap": true,                           /* Create sourcemaps for d.ts files. */
     // "emitDeclarationOnly": true,                      /* Only output d.ts files and not JavaScript files. */
     // "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */

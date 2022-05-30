@@ -1,6 +1,6 @@
 version: "3.8"
 services:
   redis:
-    image: redis
+    image: redis:7.0-alpine
     ports:
       - 6389:6379
