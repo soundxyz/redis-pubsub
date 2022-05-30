@@ -29,6 +29,9 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "prepublishOnly": "concurrently -r \"bob-ts -i src -d dist --no-sourcemap\" \"tsc -p tsconfig.build.json\"",
     "release": "changeset publish",
