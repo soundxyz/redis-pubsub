@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 1.0.2
+
+### Patch Changes
+
+- 3546795: Fix cjs publish
+
 ## 1.0.1
 
 ### Patch Changes
