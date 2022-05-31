@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 1.1.0
+
+### Minor Changes
+
+- 87cf525: Allow separate input from output zod schemas
+
 ## 1.0.2
 
 ### Patch Changes
