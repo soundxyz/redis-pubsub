@@ -35,7 +35,7 @@
   "scripts": {
     "prepublishOnly": "concurrently -r \"bob-ts -f interop -i src -d dist --no-sourcemap\" \"tsc -p tsconfig.build.json\"",
     "release": "changeset publish",
-    "test": "c8 --include=src --exclude=src/promise.ts ava",
+    "test": "c8 --100 --include=src --exclude=src/promise.ts ava",
     "test:watch": "ava --watch",
     "test:watch:coverage": "bob-watch -w src test package.json -c \"pnpm test\""
   },
