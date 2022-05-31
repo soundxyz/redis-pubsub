@@ -10,6 +10,7 @@ Full type-safe Redis PubSub system with async iterators
 - [x] Support for [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) / [AbortSignal](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal)
 - [x] Support for type-safe filtering using [Type Guards / Type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates)
 - [x] Support for **Entity** + **Identifier** pattern subscriptions
+- [x] Support for Async [Zod Refines](https://zod.dev/?id=refine) and Async [Zod Transforms](https://zod.dev/?id=transform)
 - [x] [GraphQL](https://graphql.org/) API ready
 
 ## Install
@@ -176,6 +177,45 @@ await userChannel.publish({
   },
   identifier: 1,
 });
+```
+
+### Separate input from output
+
+You can levarage [Zod Transforms](https://zod.dev/?id=transform) to be able to separate input types from the output types, and receive any custom class or output on your subscriptions.
+
+```ts
+class CustomClass {
+  constructor(public name: string) {}
+}
+
+const inputSchema = z.string();
+const outputSchema = z.string().transform((input) => new CustomClass(input));
+
+const channel = pubSub.createChannel({
+  name: "separate-type",
+  inputSchema,
+  outputSchema,
+});
+
+const subscription = (async () => {
+  for await (const data of channel.subscribe()) {
+    return data;
+  }
+})();
+
+await channel.isReady();
+
+await channel.publish({
+  value: "test",
+});
+
+const result = await subscription;
+
+// true
+console.log(result instanceof CustomClass);
+
+// true
+console.log(result.name === "test");
 ```
 
 ### Use AbortController / AbortSignal
