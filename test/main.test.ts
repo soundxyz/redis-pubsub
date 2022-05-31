@@ -485,3 +485,42 @@ test("unsubscribe specific channels", async (t) => {
 
   t.deepEqual(await Promise.all([subscription1, subscription2]), [undefined, undefined]);
 });
+
+test("separate input and output schema", async (t) => {
+  const pubSub = getPubsub();
+
+  t.teardown(pubSub.close);
+
+  class CustomClass {
+    constructor(public name: string) {}
+  }
+
+  const inputSchema = z.string();
+  const outputSchema = z.string().transform((input) => new CustomClass(input));
+
+  const channel = pubSub.createChannel({
+    name: "separate-type",
+    inputSchema,
+    outputSchema,
+  });
+
+  const subscription = (async () => {
+    for await (const data of channel.subscribe()) {
+      t.true(data instanceof CustomClass);
+      t.is(data.name, "test");
+      return data;
+    }
+  })();
+
+  await channel.isReady();
+
+  await channel.publish({
+    value: "test",
+  });
+
+  const result = await subscription;
+
+  t.true(result instanceof CustomClass);
+  assert(result);
+  t.is(result.name, "test");
+});

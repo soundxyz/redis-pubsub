@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import { parse, stringify } from "superjson";
-import type { ZodSchema } from "zod";
+import type { ZodSchema, ZodTypeDef } from "zod";
 import {
   createDeferredPromise,
   DeferredPromise,
@@ -27,7 +27,8 @@ export function RedisPubSub({
     readonly name: string;
     readonly identifier: string | undefined;
     readonly channel: string;
-    readonly schema: ZodSchema<unknown>;
+    readonly inputSchema: ZodSchema<unknown>;
+    readonly outputSchema: ZodSchema<unknown>;
     readonly dataPromises: Set<DataPromise>;
     ready: DeferredPromise<void>;
   }
@@ -52,7 +53,7 @@ export function RedisPubSub({
     let parsedMessage: unknown;
 
     try {
-      parsedMessage = await subscription.schema.parseAsync(parse(message));
+      parsedMessage = await subscription.outputSchema.parseAsync(parse(message));
     } catch (err) {
       onParseError(err);
       return;
@@ -125,18 +126,33 @@ export function RedisPubSub({
     );
   }
 
-  function createChannel<Value>({
-    schema,
+  function createChannel<Input, Output>({
     name,
     isLazy = true,
+    ...schemas
   }: {
-    schema: ZodSchema<Value>;
     name: string;
     /**
      * @default true
      */
     isLazy?: boolean;
-  }) {
+  } & (
+    | {
+        inputSchema: ZodSchema<Input, ZodTypeDef, Input>;
+        outputSchema: ZodSchema<Output, ZodTypeDef, Input>;
+        schema?: never;
+      }
+    | {
+        schema: ZodSchema<Output, ZodTypeDef, Input>;
+        inputSchema?: never;
+        outputSchema?: never;
+      }
+  )) {
+    const { inputSchema, outputSchema } =
+      "schema" in schemas && schemas.schema
+        ? { inputSchema: schemas.schema, outputSchema: schemas.schema }
+        : schemas;
+
     if (!isLazy) {
       const channel = name;
       const initialSubscriptionValue = getSubscriptionValue({
@@ -171,28 +187,29 @@ export function RedisPubSub({
         name,
         channel,
         identifier: identifier?.toString(),
-        schema,
+        inputSchema,
+        outputSchema,
         ready: createDeferredPromise(),
       });
     }
 
-    function subscribe<FilteredValue extends Value>(subscribeArguments: {
+    function subscribe<FilteredValue extends Output>(subscribeArguments: {
       abortSignal?: AbortSignal;
-      filter: (value: Value) => value is FilteredValue;
+      filter: (value: Output) => value is FilteredValue;
       identifier?: string | number;
     }): AsyncGenerator<FilteredValue, void, unknown>;
     function subscribe(subscribeArguments?: {
       abortSignal?: AbortSignal;
-      filter?: (value: Value) => unknown;
+      filter?: (value: Output) => unknown;
       identifier?: string | number;
-    }): AsyncGenerator<Value, void, unknown>;
+    }): AsyncGenerator<Output, void, unknown>;
     async function* subscribe({
       abortSignal,
       filter,
       identifier,
     }: {
       abortSignal?: AbortSignal;
-      filter?: (value: Value) => unknown;
+      filter?: (value: Output) => unknown;
       identifier?: string | number;
     } = {}) {
       const channel = identifier ? name + identifier : name;
@@ -251,7 +268,7 @@ export function RedisPubSub({
       while (true) {
         await dataPromise.current.promise;
 
-        for (const value of dataPromise.current.values as Value[]) {
+        for (const value of dataPromise.current.values as Output[]) {
           if (filter && !filter(value)) continue;
 
           yield value;
@@ -308,16 +325,16 @@ export function RedisPubSub({
 
     async function publish(
       ...values: [
-        { value: Value; identifier?: string | number },
-        ...{ value: Value; identifier?: string | number }[]
+        { value: Input; identifier?: string | number },
+        ...{ value: Input; identifier?: string | number }[]
       ]
     ) {
       await Promise.all(
         values.map(async ({ value, identifier }) => {
-          let parsedValue: Value;
+          let parsedValue: Input | Output;
 
           try {
-            parsedValue = await schema.parseAsync(value);
+            parsedValue = await inputSchema.parseAsync(value);
           } catch (err) {
             onParseError(err);
             return;
