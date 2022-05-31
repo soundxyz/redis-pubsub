@@ -165,12 +165,12 @@ test("parse error on subscribe", async (t) => {
 
 test("internal publish error", async (t) => {
   const { createChannel, close } = getPubsub({
-    publisher: ({
+    publisher: {
       async publish(_channel: string, _message: string) {
         throw Error("Expected error");
       },
       disconnect() {},
-    } as unknown) as Redis,
+    } as unknown as Redis,
   });
 
   t.teardown(close);
@@ -193,14 +193,14 @@ test("internal publish error", async (t) => {
 
 test("internal subscribe error", async (t) => {
   const { createChannel, close } = getPubsub({
-    subscriber: ({
+    subscriber: {
       async subscribe(_channel: string, _message: string) {
         throw Error("Expected error");
       },
       disconnect() {},
       on() {},
       off() {},
-    } as unknown) as Redis,
+    } as unknown as Redis,
   });
 
   t.teardown(close);
@@ -224,7 +224,7 @@ test("internal subscribe error", async (t) => {
 
 test("internal unsubscribe error", async (t) => {
   const { createChannel, publisher } = getPubsub({
-    subscriber: ({
+    subscriber: {
       async subscribe(_channel: string, _message: string) {},
       async unsubscribe() {
         throw Error("Expected error");
@@ -232,7 +232,7 @@ test("internal unsubscribe error", async (t) => {
       disconnect() {},
       on() {},
       off() {},
-    } as unknown) as Redis,
+    } as unknown as Redis,
   });
 
   t.teardown(() => {
