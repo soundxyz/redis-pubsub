@@ -171,6 +171,8 @@ export function RedisPubSub({
       unsubscribe,
       publish,
       unsubscribeAll,
+      inputSchema,
+      outputSchema,
     };
 
     function getSubscriptionValue({
