@@ -9,7 +9,7 @@ jobs:
     services:
       # Label used to access the service container
       redis:
-        image: redis:7.0-alpine
+        image: docker.dragonflydb.io/dragonflydb/dragonfly
         ports:
           - 6389:6379
     runs-on: ubuntu-20.04
