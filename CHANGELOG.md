@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 1.1.1
+
+### Patch Changes
+
+- 9b23a1f: Give back inputSchema and outputSchema on createChannel for re-use
+
 ## 1.1.0
 
 ### Minor Changes
