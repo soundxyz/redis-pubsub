@@ -21,9 +21,9 @@
       "import": "./dist/index.mjs"
     },
     "./*": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
+      "types": "./dist/*.d.ts",
+      "require": "./dist/*.js",
+      "import": "./dist/*.mjs"
     }
   },
   "main": "dist/index.js",
