@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 1.1.2
+
+### Patch Changes
+
+- 2623d83: Fix wildcard imports
+
 ## 1.1.1
 
 ### Patch Changes
