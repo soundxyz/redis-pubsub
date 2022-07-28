@@ -1,5 +1,15 @@
 # @soundxyz/redis-pubsub
 
+## 2.1.0
+
+### Minor Changes
+
+- 17a8cf7: New "subscription" helper exported from library with abortSignal and abortController, specially useful for GraphQL Usage
+
+### Patch Changes
+
+- 7dcf49a: Add try-finally block to subscribe generator
+
 ## 2.0.0
 
 ### Major Changes
