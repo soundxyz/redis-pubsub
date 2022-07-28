@@ -75,7 +75,13 @@
     "zod": "^3.17.3"
   },
   "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    },
     "pino": {
+      "optional": true
+    },
+    "zod": {
       "optional": true
     }
   }
