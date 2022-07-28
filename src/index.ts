@@ -81,7 +81,7 @@ export function RedisPubSub({
 
     const start = performance.now();
 
-    return () => `${performance.now() - start}ms`;
+    return () => `${(performance.now() - start).toFixed()}ms`;
   }
 
   function logMessage(code: EventCodes, paramsObject: Record<string, string | number>) {
