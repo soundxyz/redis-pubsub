@@ -1,5 +1,15 @@
 # @soundxyz/redis-pubsub
 
+## 2.0.0
+
+### Major Changes
+
+- 748ce12: New Pino logger required option + optional "logLevel" option (default is "silent") to debug and trace subscriptions performance
+
+### Patch Changes
+
+- 2623d83: Fix wildcard imports
+
 ## 1.1.1
 
 ### Patch Changes
