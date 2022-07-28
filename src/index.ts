@@ -20,6 +20,10 @@ export interface RedisPubSubOptions {
    */
   logLevel?: LogLevel;
   onParseError?: (err: unknown) => void;
+  /**
+   * Customize or disable the specified event codes messages
+   */
+  customizeEventCodes?: Partial<Record<EventCodes, string | boolean | null>>;
 }
 
 export const EventCodes = {
@@ -47,8 +51,11 @@ export function RedisPubSub({
   logger,
   logLevel = "silent",
   onParseError = logger.error,
+  customizeEventCodes,
 }: RedisPubSubOptions) {
   const intLogLevel = logLevel === "silent" ? 0 : logLevel === "info" ? 1 : 2;
+
+  const customizedEventCodes = { ...EventCodes, ...customizeEventCodes };
 
   interface DataPromise {
     current: PubSubDeferredPromise<unknown>;
@@ -81,10 +88,16 @@ export function RedisPubSub({
 
     const start = performance.now();
 
-    return () => `${performance.now() - start}ms`;
+    return () => `${(performance.now() - start).toFixed()}ms`;
   }
 
   function logMessage(code: EventCodes, paramsObject: Record<string, string | number>) {
+    let codeValue = customizedEventCodes[code];
+
+    if (!codeValue) return;
+
+    if (typeof codeValue !== "string") codeValue = EventCodes[code];
+
     let params = "";
 
     for (const key in paramsObject) {
@@ -342,6 +355,7 @@ export function RedisPubSub({
             if (intLogLevel) {
               logMessage("SUBSCRIPTION_ABORTED", {
                 channel,
+                subscribers: dataPromises.size,
               });
             }
             unsubscribe().catch((err) => subscriptionValue.ready.reject(err));

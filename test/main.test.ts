@@ -521,5 +521,9 @@ test(
   "logLevel=info subscribe/unsubscribe and abort controller",
   baseTest({
     logLevel: "info",
+    customizeEventCodes: {
+      PUBLISH_MESSAGE: true,
+      SUBSCRIBE_REDIS: false,
+    },
   })
 );
