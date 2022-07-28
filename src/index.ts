@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import type { Logger } from "pino";
 import { parse, stringify } from "superjson";
 import type { ZodSchema, ZodTypeDef } from "zod";
 import {
@@ -8,17 +9,47 @@ import {
   pubsubDeferredPromise,
 } from "./promise";
 
+export type LogLevel = "silent" | "info" | "tracing";
+
 export interface RedisPubSubOptions {
   publisher: Redis;
   subscriber: Redis;
+  logger: Logger;
+  /**
+   * @default "silent"
+   */
+  logLevel?: LogLevel;
   onParseError?: (err: unknown) => void;
 }
+
+export const EventCodes = {
+  SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS: "SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS",
+  SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS: "SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS",
+  SUBSCRIPTION_MESSAGE_EXECUTION_TIME: "SUBSCRIPTION_MESSAGE_EXECUTION_TIME",
+  SUBSCRIPTION_MESSAGE_FILTERED_OUT: "SUBSCRIPTION_MESSAGE_FILTERED_OUT",
+  SUBSCRIBE_REDIS: "SUBSCRIBE_REDIS",
+  UNSUBSCRIBE_REDIS: "UNSUBSCRIBE_REDIS",
+  UNSUBSCRIBE_CHANNEL: "UNSUBSCRIBE_CHANNEL",
+  SUBSCRIBE_REUSE_REDIS_SUBSCRIPTION: "SUBSCRIBE_REUSE_REDIS_SUBSCRIPTION",
+  SUBSCRIBE_EXECUTION_TIME: "SUBSCRIBE_EXECUTION_TIME",
+  UNSUBSCRIBE_EXECUTION_TIME: "UNSUBSCRIBE_EXECUTION_TIME",
+  SUBSCRIPTION_FINISHED: "SUBSCRIPTION_FINISHED",
+  PUBLISH_MESSAGE: "PUBLISH_MESSAGE",
+  PUBLISH_MESSAGE_EXECUTION_TIME: "PUBLISH_MESSAGE_EXECUTION_TIME",
+  SUBSCRIPTION_ABORTED: "SUBSCRIPTION_ABORTED",
+} as const;
+
+export type EventCodes = typeof EventCodes[keyof typeof EventCodes];
 
 export function RedisPubSub({
   publisher,
   subscriber,
-  onParseError = console.error,
+  logger,
+  logLevel = "silent",
+  onParseError = logger.error,
 }: RedisPubSubOptions) {
+  const intLogLevel = logLevel === "silent" ? 0 : logLevel === "info" ? 1 : 2;
+
   interface DataPromise {
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
@@ -45,10 +76,35 @@ export function RedisPubSub({
     close,
   };
 
+  function getTracing() {
+    if (intLogLevel < 2) return null;
+
+    const start = performance.now();
+
+    return () => `${performance.now() - start}ms`;
+  }
+
+  function logMessage(code: EventCodes, paramsObject: Record<string, string | number>) {
+    let params = "";
+
+    for (const key in paramsObject) {
+      params += " " + paramsObject[key];
+    }
+
+    logger.info(`[${code}]${params}`);
+  }
+
   async function onMessage(channel: string, message: string) {
+    const tracing = getTracing();
+
     const subscription = subscriptionsMap[channel];
 
-    if (!subscription?.dataPromises.size) return;
+    if (!subscription?.dataPromises.size) {
+      if (intLogLevel) {
+        logMessage("SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS", { channel });
+      }
+      return;
+    }
 
     let parsedMessage: unknown;
 
@@ -59,9 +115,24 @@ export function RedisPubSub({
       return;
     }
 
+    if (intLogLevel) {
+      logMessage("SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS", {
+        channel,
+        subscribers: subscription.dataPromises.size,
+      });
+    }
+
     for (const dataPromise of subscription.dataPromises) {
       dataPromise.current.values.push(parsedMessage);
       dataPromise.current.resolve();
+    }
+
+    if (tracing) {
+      logMessage("SUBSCRIPTION_MESSAGE_EXECUTION_TIME", {
+        channel,
+        time: tracing(),
+        subscribers: subscription.dataPromises.size,
+      });
     }
   }
 
@@ -69,13 +140,36 @@ export function RedisPubSub({
     const subscribed = subscribedChannels[channel];
 
     if (subscribed) {
-      if (typeof subscribed === "boolean") return;
+      if (typeof subscribed === "boolean") {
+        if (intLogLevel) {
+          logMessage("SUBSCRIBE_REUSE_REDIS_SUBSCRIPTION", {
+            channel,
+          });
+        }
+        return;
+      }
 
       return subscribed;
     }
+
+    const tracing = getTracing();
+
     return (subscribedChannels[channel] = subscriber.subscribe(channel).then(
       () => {
         subscribedChannels[channel] = true;
+
+        if (intLogLevel) {
+          logMessage("SUBSCRIBE_REDIS", {
+            channel,
+          });
+        }
+
+        if (tracing) {
+          logMessage("SUBSCRIBE_EXECUTION_TIME", {
+            channel,
+            time: tracing(),
+          });
+        }
       },
       (err) => {
         subscribedChannels[channel] = false;
@@ -101,9 +195,24 @@ export function RedisPubSub({
     return subcribed.then(unsubscribe);
 
     function unsubscribe() {
+      const tracing = getTracing();
+
       return (unsubscribingChannels[channel] = subscriber.unsubscribe(channel).then(
         () => {
           unsubscribingChannels[channel] = subscribedChannels[channel] = false;
+
+          if (intLogLevel) {
+            logMessage("UNSUBSCRIBE_REDIS", {
+              channel,
+            });
+          }
+
+          if (tracing) {
+            logMessage("UNSUBSCRIBE_EXECUTION_TIME", {
+              channel,
+              time: tracing(),
+            });
+          }
         },
         (err) => {
           unsubscribingChannels[channel] = false;
@@ -230,6 +339,11 @@ export function RedisPubSub({
         abortSignal.addEventListener(
           "abort",
           (abortListener = () => {
+            if (intLogLevel) {
+              logMessage("SUBSCRIPTION_ABORTED", {
+                channel,
+              });
+            }
             unsubscribe().catch((err) => subscriptionValue.ready.reject(err));
           })
         );
@@ -247,6 +361,13 @@ export function RedisPubSub({
 
         if (abortSignal && abortListener) {
           abortSignal.removeEventListener("abort", abortListener);
+        }
+
+        if (intLogLevel) {
+          logMessage("UNSUBSCRIBE_CHANNEL", {
+            channel,
+            subscribers: dataPromises.size,
+          });
         }
 
         if (isLazy && dataPromises.size === 0) {
@@ -271,12 +392,24 @@ export function RedisPubSub({
         await dataPromise.current.promise;
 
         for (const value of dataPromise.current.values as Output[]) {
-          if (filter && !filter(value)) continue;
+          if (filter && !filter(value)) {
+            if (intLogLevel) {
+              logMessage("SUBSCRIPTION_MESSAGE_FILTERED_OUT", {
+                channel,
+              });
+            }
+            continue;
+          }
 
           yield value;
         }
 
         if (dataPromise.current.isDone) {
+          if (intLogLevel) {
+            logMessage("SUBSCRIPTION_FINISHED", {
+              channel,
+            });
+          }
           break;
         } else {
           dataPromise.current = pubsubDeferredPromise();
@@ -333,6 +466,8 @@ export function RedisPubSub({
     ) {
       await Promise.all(
         values.map(async ({ value, identifier }) => {
+          const tracing = getTracing();
+
           let parsedValue: Input | Output;
 
           try {
@@ -342,7 +477,22 @@ export function RedisPubSub({
             return;
           }
 
-          await publisher.publish(identifier ? name + identifier : name, stringify(parsedValue));
+          const channel = identifier ? name + identifier : name;
+
+          await publisher.publish(channel, stringify(parsedValue));
+
+          if (intLogLevel) {
+            logMessage("PUBLISH_MESSAGE", {
+              channel,
+            });
+          }
+
+          if (tracing) {
+            logMessage("PUBLISH_MESSAGE_EXECUTION_TIME", {
+              channel,
+              time: tracing(),
+            });
+          }
         })
       );
     }

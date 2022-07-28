@@ -1,11 +1,14 @@
 import assert from "assert";
 import test from "ava";
 import Redis from "ioredis";
+import Pino from "pino";
 import { stringify } from "superjson";
 import waitForExpect from "wait-for-expect";
 import { z, ZodError } from "zod";
 import { RedisPubSub, RedisPubSubOptions } from "../src";
 import { createDeferredPromise } from "../src/promise";
+
+const logger = Pino();
 
 const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
   const publisher = new Redis({
@@ -18,6 +21,7 @@ const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
   const pubSub = RedisPubSub({
     publisher,
     subscriber,
+    logger,
     ...options,
   });
 
