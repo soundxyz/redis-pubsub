@@ -1,5 +1,15 @@
 # @soundxyz/redis-pubsub
 
+## 2.2.0
+
+### Minor Changes
+
+- 33c49d4: New "customizeEventCodes" to be able to change or disable specified events logs
+
+### Patch Changes
+
+- 33c49d4: Remove all decimals from tracing values
+
 ## 2.1.0
 
 ### Minor Changes
