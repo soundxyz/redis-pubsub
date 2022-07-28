@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 2.2.1
+
+### Patch Changes
+
+- 4574ae0: Peer dependencies as optional
+
 ## 2.2.0
 
 ### Minor Changes
