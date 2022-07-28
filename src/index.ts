@@ -382,41 +382,43 @@ export function RedisPubSub({
 
       dataPromises.add(dataPromise);
 
-      const subscribing = redisSubscribe({
-        channel,
-      })?.then(subscriptionValue.ready.resolve, subscriptionValue.ready.reject);
+      try {
+        const subscribing = redisSubscribe({
+          channel,
+        })?.then(subscriptionValue.ready.resolve, subscriptionValue.ready.reject);
 
-      if (subscribing) await subscribing;
+        if (subscribing) await subscribing;
 
-      while (true) {
-        await dataPromise.current.promise;
+        while (true) {
+          await dataPromise.current.promise;
 
-        for (const value of dataPromise.current.values as Output[]) {
-          if (filter && !filter(value)) {
+          for (const value of dataPromise.current.values as Output[]) {
+            if (filter && !filter(value)) {
+              if (intLogLevel) {
+                logMessage("SUBSCRIPTION_MESSAGE_FILTERED_OUT", {
+                  channel,
+                });
+              }
+              continue;
+            }
+
+            yield value;
+          }
+
+          if (dataPromise.current.isDone) {
             if (intLogLevel) {
-              logMessage("SUBSCRIPTION_MESSAGE_FILTERED_OUT", {
+              logMessage("SUBSCRIPTION_FINISHED", {
                 channel,
               });
             }
-            continue;
+            break;
+          } else {
+            dataPromise.current = pubsubDeferredPromise();
           }
-
-          yield value;
         }
-
-        if (dataPromise.current.isDone) {
-          if (intLogLevel) {
-            logMessage("SUBSCRIPTION_FINISHED", {
-              channel,
-            });
-          }
-          break;
-        } else {
-          dataPromise.current = pubsubDeferredPromise();
-        }
+      } finally {
+        await dataPromise.unsubscribe();
       }
-
-      await dataPromise.unsubscribe();
     }
 
     async function unsubscribe(
