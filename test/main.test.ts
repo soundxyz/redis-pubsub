@@ -1,11 +1,16 @@
 import assert from "assert";
-import test from "ava";
+import test, { ExecutionContext } from "ava";
 import Redis from "ioredis";
+import Pino from "pino";
 import { stringify } from "superjson";
 import waitForExpect from "wait-for-expect";
 import { z, ZodError } from "zod";
 import { RedisPubSub, RedisPubSubOptions } from "../src";
 import { createDeferredPromise } from "../src/promise";
+
+const logger = Pino({
+  level: process.env.CI ? "warn" : "info",
+});
 
 const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
   const publisher = new Redis({
@@ -18,6 +23,8 @@ const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
   const pubSub = RedisPubSub({
     publisher,
     subscriber,
+    logger,
+    logLevel: "tracing",
     ...options,
   });
 
@@ -27,74 +34,79 @@ const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
     subscriber,
   };
 };
-test("subscribe/unsubscribe and abort controller", async (t) => {
-  const pubSub = getPubsub();
 
-  t.teardown(pubSub.close);
+function baseTest(options?: Partial<RedisPubSubOptions>) {
+  return async (t: ExecutionContext<unknown>) => {
+    const pubSub = getPubsub(options);
 
-  const channel = pubSub.createChannel({
-    schema: z.string(),
-    name: "test",
-  });
+    t.teardown(pubSub.close);
 
-  const firstSubscribeAbortController = new AbortController();
+    const channel = pubSub.createChannel({
+      schema: z.string(),
+      name: "test",
+    });
 
-  const firstSubscribeValues: string[] = [];
-  const firstSubscribe = (async () => {
-    for await (const data of channel.subscribe({
-      abortSignal: firstSubscribeAbortController.signal,
-    })) {
-      firstSubscribeValues.push(data);
-    }
-  })();
+    const firstSubscribeAbortController = new AbortController();
 
-  const secondSubscribeValues: string[] = [];
-  const secondSubscribe = (async () => {
-    for await (const data of channel.subscribe()) {
-      secondSubscribeValues.push(data);
-    }
-  })();
+    const firstSubscribeValues: string[] = [];
+    const firstSubscribe = (async () => {
+      for await (const data of channel.subscribe({
+        abortSignal: firstSubscribeAbortController.signal,
+      })) {
+        firstSubscribeValues.push(data);
+      }
+    })();
 
-  await channel.isReady();
+    const secondSubscribeValues: string[] = [];
+    const secondSubscribe = (async () => {
+      for await (const data of channel.subscribe()) {
+        secondSubscribeValues.push(data);
+      }
+    })();
 
-  await Promise.all([channel.publish({ value: "1" }, { value: "2" }, { value: "3" })]);
+    await channel.isReady();
 
-  await waitForExpect(() => {
-    t.deepEqual(firstSubscribeValues, ["1", "2", "3"]);
-    t.deepEqual(secondSubscribeValues, ["1", "2", "3"]);
-  });
+    await Promise.all([channel.publish({ value: "1" }, { value: "2" }, { value: "3" })]);
 
-  await Promise.all([channel.publish({ value: "4" })]);
+    await waitForExpect(() => {
+      t.deepEqual(firstSubscribeValues, ["1", "2", "3"]);
+      t.deepEqual(secondSubscribeValues, ["1", "2", "3"]);
+    });
 
-  await waitForExpect(() => {
+    await Promise.all([channel.publish({ value: "4" })]);
+
+    await waitForExpect(() => {
+      t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
+      t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4"]);
+    });
+
+    firstSubscribeAbortController.abort();
+
+    await firstSubscribe;
+
+    await channel.publish({ value: "5" });
+
+    await waitForExpect(() => {
+      t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
+      t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4", "5"]);
+    });
+
     t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
-    t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4"]);
-  });
 
-  firstSubscribeAbortController.abort();
+    await channel.unsubscribeAll();
 
-  await firstSubscribe;
+    await secondSubscribe;
 
-  await channel.publish({ value: "5" });
+    await channel.publish({ value: "6" });
 
-  await waitForExpect(() => {
     t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
     t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4", "5"]);
-  });
 
-  t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
+    await pubSub.close();
+  };
+}
 
-  await channel.unsubscribeAll();
-
-  await secondSubscribe;
-
-  await channel.publish({ value: "6" });
-
-  t.deepEqual(firstSubscribeValues, ["1", "2", "3", "4"]);
-  t.deepEqual(secondSubscribeValues, ["1", "2", "3", "4", "5"]);
-
-  await pubSub.close();
-});
+test("subscribe/unsubscribe and abort controller", baseTest());
 
 test("parse error on publish", async (t) => {
   let receivedError!: unknown | undefined;
@@ -524,3 +536,17 @@ test("separate input and output schema", async (t) => {
   assert(result);
   t.is(result.name, "test");
 });
+
+test(
+  "logLevel=silent subscribe/unsubscribe and abort controller",
+  baseTest({
+    logLevel: "silent",
+  })
+);
+
+test(
+  "logLevel=info subscribe/unsubscribe and abort controller",
+  baseTest({
+    logLevel: "info",
+  })
+);
