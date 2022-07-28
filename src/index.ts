@@ -88,7 +88,7 @@ export function RedisPubSub({
     let params = "";
 
     for (const key in paramsObject) {
-      params += " " + paramsObject[key];
+      params += " " + key + "=" + paramsObject[key];
     }
 
     logger.info(`[${code}]${params}`);
