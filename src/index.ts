@@ -355,6 +355,7 @@ export function RedisPubSub({
             if (intLogLevel) {
               logMessage("SUBSCRIPTION_ABORTED", {
                 channel,
+                subscribers: dataPromises.size,
               });
             }
             unsubscribe().catch((err) => subscriptionValue.ready.reject(err));
