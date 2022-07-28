@@ -1,39 +1,12 @@
 import assert from "assert";
 import test, { ExecutionContext } from "ava";
 import Redis from "ioredis";
-import Pino from "pino";
 import { stringify } from "superjson";
 import waitForExpect from "wait-for-expect";
 import { z, ZodError } from "zod";
-import { RedisPubSub, RedisPubSubOptions } from "../src";
+import type { RedisPubSubOptions } from "../src";
 import { createDeferredPromise } from "../src/promise";
-
-const logger = Pino({
-  level: process.env.CI ? "warn" : "info",
-});
-
-const getPubsub = (options?: Partial<RedisPubSubOptions>) => {
-  const publisher = new Redis({
-    port: 6389,
-  });
-  const subscriber = new Redis({
-    port: 6389,
-  });
-
-  const pubSub = RedisPubSub({
-    publisher,
-    subscriber,
-    logger,
-    logLevel: "tracing",
-    ...options,
-  });
-
-  return {
-    ...pubSub,
-    publisher,
-    subscriber,
-  };
-};
+import { getPubsub } from "./helpers";
 
 function baseTest(options?: Partial<RedisPubSubOptions>) {
   return async (t: ExecutionContext<unknown>) => {
