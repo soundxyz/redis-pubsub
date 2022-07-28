@@ -522,3 +522,27 @@ export function RedisPubSub({
     publisher.disconnect();
   }
 }
+
+export function subscription<T>(
+  asyncGenerator: (args: {
+    abortSignal: AbortSignal;
+    abortController: AbortController;
+  }) => AsyncGenerator<T>
+) {
+  const abortController = new AbortController();
+
+  const asyncIterator = asyncGenerator({
+    abortController,
+    abortSignal: abortController.signal,
+  });
+
+  const asyncReturn = asyncIterator.return;
+
+  asyncIterator.return = () => {
+    abortController.abort();
+
+    return asyncReturn.call(asyncIterator, undefined);
+  };
+
+  return asyncIterator;
+}

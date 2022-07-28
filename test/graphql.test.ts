@@ -4,8 +4,10 @@ import SchemaBuilder from "@pothos/core";
 import { ezWebSockets } from "@graphql-ez/plugin-websockets";
 import { getPubsub } from "./helpers";
 import { z } from "zod";
-import * as timers from "timers/promises";
-test("hello", async (t) => {
+import { subscription } from "../src";
+import { createDeferredPromise } from "../src/promise";
+
+test("graphql subscription", async (t) => {
   const pubsub = getPubsub();
   const builder = new SchemaBuilder({});
 
@@ -26,46 +28,29 @@ test("hello", async (t) => {
     },
   });
 
-  const withCancel = <T>(
-    asyncGenerator: (args: { abortSignal: AbortSignal }) => AsyncGenerator<T>
-  ) => {
-    const abortController = new AbortController();
+  const backendCleanedPromise = createDeferredPromise(2000);
 
-    const asyncIterator = asyncGenerator({
-      abortSignal: abortController.signal,
-    });
-    const asyncReturn = asyncIterator.return;
-
-    asyncIterator.return = () => {
-      console.log("cancel", asyncReturn);
-      abortController.abort();
-
-      return asyncReturn
-        ? asyncReturn.call(asyncIterator, undefined)
-        : Promise.resolve({ value: undefined, done: true });
-    };
-
-    return asyncIterator;
-  };
+  const backendDataPromise = createDeferredPromise<number>(2000);
 
   builder.subscriptionType({
     fields(t) {
       return {
         test: t.int({
           subscribe() {
-            return withCancel(async function* subscribe({ abortSignal }) {
+            return subscription(async function* ({ abortSignal }) {
               try {
                 for await (const data of channel.subscribe({
                   abortSignal,
                 })) {
-                  console.log({ data });
                   yield data;
+                  backendDataPromise.resolve(data);
                 }
               } finally {
-                console.log("cleaned");
+                backendCleanedPromise.resolve();
               }
             });
           },
+
           resolve(t) {
             return t;
           },
@@ -73,22 +58,11 @@ test("hello", async (t) => {
       };
     },
   });
-  const { assertedQuery, websockets } = await CreateTestClient(
+  const { assertedQuery, websockets, cleanup } = await CreateTestClient(
     {
       schema: builder.toSchema({}),
       ez: {
-        plugins: [
-          ezWebSockets({
-            graphQLWS: {
-              onComplete() {
-                console.log("on complete");
-              },
-              onNext() {
-                console.log("on next");
-              },
-            },
-          }),
-        ],
+        plugins: [ezWebSockets("new")],
       },
     },
     {
@@ -100,61 +74,29 @@ test("hello", async (t) => {
     }
   );
 
+  t.teardown(cleanup);
+
   const { __typename } = await assertedQuery("{__typename}");
 
-  console.log({
-    __typename,
-  });
+  t.is(__typename, "Query");
 
-  t.true(true);
-
-  const wsClient = await websockets.client;
-
-  const asd = wsClient.subscribe(
-    {
-      query: "subscription{test}",
-    },
-    {
-      complete() {
-        console.log("complete");
-      },
-      error(err) {
-        console.log("error", err);
-      },
-      next(value) {
-        console.log("Next", value);
-      },
-    }
-  );
-
-  // const subscribe = websockets.subscribe("subscription{test}");
+  const { iterator, unsubscribe } = websockets.subscribe<{ test: number }>("subscription{test}");
 
   await channel.isReady();
 
-  await timers.setTimeout(100);
-
   await channel.publish({ value: 1 });
 
-  await timers.setTimeout(100);
+  let iteratorData: number | undefined;
 
-  await asd();
-  // setTimeout(() => {
-  //   subscribe.unsubscribe();
-  // }, 50);
+  for await (const { data } of iterator) {
+    iteratorData = data?.test;
 
-  // for await (const data of subscribe.iterator) {
-  //   console.log({
-  //     data,
-  //   });
-  // }
+    unsubscribe().catch(t.fail);
+  }
 
-  // await timers.setTimeout(100);
+  t.is(iteratorData, 1);
 
-  // await subscribe.unsubscribe();
+  await backendCleanedPromise.promise;
 
-  // const client = await websockets.client;
-
-  // await client.dispose();
-
-  await timers.setTimeout(2000);
+  t.is(await backendDataPromise.promise, 1);
 });
