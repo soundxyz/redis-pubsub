@@ -104,7 +104,7 @@ export function RedisPubSub({
       params += " " + key + "=" + paramsObject[key];
     }
 
-    logger.info(`[${code}]${params}`);
+    logger.info(`[${codeValue}]${params}`);
   }
 
   async function onMessage(channel: string, message: string) {
