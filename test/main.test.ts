@@ -513,17 +513,19 @@ test("separate input and output schema", async (t) => {
 test(
   "logLevel=silent subscribe/unsubscribe and abort controller",
   baseTest({
-    logLevel: "silent",
+    logEvents: undefined,
   })
 );
 
 test(
   "logLevel=info subscribe/unsubscribe and abort controller",
   baseTest({
-    logLevel: "info",
-    customizeEventCodes: {
-      PUBLISH_MESSAGE: true,
-      SUBSCRIBE_REDIS: false,
+    logEvents: {
+      events: {
+        PUBLISH_MESSAGE: "PUBLISH",
+        SUBSCRIBE_REDIS: false,
+        SUBSCRIBE_EXECUTION_TIME: console.log,
+      },
     },
   })
 );

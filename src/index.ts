@@ -1,5 +1,4 @@
 import type { Redis } from "ioredis";
-import type { Logger } from "pino";
 import { parse, stringify } from "superjson";
 import type { ZodSchema, ZodTypeDef } from "zod";
 import {
@@ -9,21 +8,36 @@ import {
   pubsubDeferredPromise,
 } from "./promise";
 
-export type LogLevel = "silent" | "info" | "tracing";
+export type EventParamsObject = Record<string, string | number | boolean | null | undefined>;
+
+export type LogEventArgs = { message: string; code: EventCodes; params: EventParamsObject };
+
+export type LoggedEvents = Partial<
+  Record<EventCodes, string | boolean | null | ((args: LogEventArgs) => void)>
+>;
+
+function defaultLog({ message }: LogEventArgs) {
+  console.log(message);
+}
 
 export interface RedisPubSubOptions {
   publisher: Redis;
   subscriber: Redis;
-  logger: Logger;
-  /**
-   * @default "silent"
-   */
-  logLevel?: LogLevel;
   onParseError?: (err: unknown) => void;
   /**
-   * Customize or disable the specified event codes messages
+   * Enable and customize observability
    */
-  customizeEventCodes?: Partial<Record<EventCodes, string | boolean | null>>;
+  logEvents?: {
+    /**
+     * Set specific events to enable logging
+     */
+    events: LoggedEvents;
+
+    /**
+     * @default console.log
+     */
+    log?: (args: LogEventArgs) => void;
+  };
 }
 
 export const EventCodes = {
@@ -48,15 +62,9 @@ export type EventCodes = typeof EventCodes[keyof typeof EventCodes];
 export function RedisPubSub({
   publisher,
   subscriber,
-  logger,
-  logLevel = "silent",
-  onParseError = logger.error,
-  customizeEventCodes,
+  logEvents,
+  onParseError = console.error,
 }: RedisPubSubOptions) {
-  const intLogLevel = logLevel === "silent" ? 0 : logLevel === "info" ? 1 : 2;
-
-  const customizedEventCodes = { ...EventCodes, ...customizeEventCodes };
-
   interface DataPromise {
     current: PubSubDeferredPromise<unknown>;
     unsubscribe: () => Promise<void>;
@@ -77,6 +85,38 @@ export function RedisPubSub({
   const subscribedChannels: Record<string, boolean | Promise<void>> = {};
   const unsubscribingChannels: Record<string, Promise<void> | false> = {};
 
+  const enabledLogEvents = logEvents?.events;
+
+  const logMessage = logEvents
+    ? function logMessage(code: EventCodes, params: EventParamsObject) {
+        const eventValue = logEvents.events[code];
+
+        if (!eventValue) return;
+
+        const log = typeof eventValue === "function" ? eventValue : logEvents.log || defaultLog;
+
+        const codeMessageValue = typeof eventValue === "string" ? eventValue : code;
+
+        let paramsString = "";
+
+        for (const key in params) {
+          let value = params[key];
+
+          if (value === undefined) continue;
+
+          if (value === "") value = "null";
+
+          paramsString += " " + key + "=" + value;
+        }
+
+        log({
+          code,
+          message: `[${codeMessageValue}]${paramsString}`,
+          params,
+        });
+      }
+    : () => void 0;
+
   return {
     createChannel,
     unsubscribeAll,
@@ -84,36 +124,18 @@ export function RedisPubSub({
   };
 
   function getTracing() {
-    if (intLogLevel < 2) return null;
-
     const start = performance.now();
 
     return () => `${(performance.now() - start).toFixed()}ms`;
   }
 
-  function logMessage(code: EventCodes, paramsObject: Record<string, string | number>) {
-    let codeValue = customizedEventCodes[code];
-
-    if (!codeValue) return;
-
-    if (typeof codeValue !== "string") codeValue = EventCodes[code];
-
-    let params = "";
-
-    for (const key in paramsObject) {
-      params += " " + key + "=" + paramsObject[key];
-    }
-
-    logger.info(`[${codeValue}]${params}`);
-  }
-
   async function onMessage(channel: string, message: string) {
-    const tracing = getTracing();
+    const tracing = enabledLogEvents?.SUBSCRIPTION_MESSAGE_EXECUTION_TIME ? getTracing() : null;
 
     const subscription = subscriptionsMap[channel];
 
     if (!subscription?.dataPromises.size) {
-      if (intLogLevel) {
+      if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS) {
         logMessage("SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS", { channel });
       }
       return;
@@ -128,7 +150,7 @@ export function RedisPubSub({
       return;
     }
 
-    if (intLogLevel) {
+    if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS) {
       logMessage("SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS", {
         channel,
         subscribers: subscription.dataPromises.size,
@@ -154,7 +176,7 @@ export function RedisPubSub({
 
     if (subscribed) {
       if (typeof subscribed === "boolean") {
-        if (intLogLevel) {
+        if (enabledLogEvents?.SUBSCRIBE_REUSE_REDIS_SUBSCRIPTION) {
           logMessage("SUBSCRIBE_REUSE_REDIS_SUBSCRIPTION", {
             channel,
           });
@@ -165,13 +187,13 @@ export function RedisPubSub({
       return subscribed;
     }
 
-    const tracing = getTracing();
+    const tracing = enabledLogEvents?.SUBSCRIBE_EXECUTION_TIME ? getTracing() : null;
 
     return (subscribedChannels[channel] = subscriber.subscribe(channel).then(
       () => {
         subscribedChannels[channel] = true;
 
-        if (intLogLevel) {
+        if (enabledLogEvents?.SUBSCRIBE_REDIS) {
           logMessage("SUBSCRIBE_REDIS", {
             channel,
           });
@@ -208,13 +230,13 @@ export function RedisPubSub({
     return subcribed.then(unsubscribe);
 
     function unsubscribe() {
-      const tracing = getTracing();
+      const tracing = enabledLogEvents?.UNSUBSCRIBE_EXECUTION_TIME ? getTracing() : null;
 
       return (unsubscribingChannels[channel] = subscriber.unsubscribe(channel).then(
         () => {
           unsubscribingChannels[channel] = subscribedChannels[channel] = false;
 
-          if (intLogLevel) {
+          if (enabledLogEvents?.UNSUBSCRIBE_REDIS) {
             logMessage("UNSUBSCRIBE_REDIS", {
               channel,
             });
@@ -352,7 +374,7 @@ export function RedisPubSub({
         abortSignal.addEventListener(
           "abort",
           (abortListener = () => {
-            if (intLogLevel) {
+            if (enabledLogEvents?.SUBSCRIPTION_ABORTED) {
               logMessage("SUBSCRIPTION_ABORTED", {
                 channel,
                 subscribers: dataPromises.size,
@@ -377,7 +399,7 @@ export function RedisPubSub({
           abortSignal.removeEventListener("abort", abortListener);
         }
 
-        if (intLogLevel) {
+        if (enabledLogEvents?.UNSUBSCRIBE_CHANNEL) {
           logMessage("UNSUBSCRIBE_CHANNEL", {
             channel,
             subscribers: dataPromises.size,
@@ -408,7 +430,7 @@ export function RedisPubSub({
 
           for (const value of dataPromise.current.values as Output[]) {
             if (filter && !filter(value)) {
-              if (intLogLevel) {
+              if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_FILTERED_OUT) {
                 logMessage("SUBSCRIPTION_MESSAGE_FILTERED_OUT", {
                   channel,
                 });
@@ -420,7 +442,7 @@ export function RedisPubSub({
           }
 
           if (dataPromise.current.isDone) {
-            if (intLogLevel) {
+            if (enabledLogEvents?.SUBSCRIPTION_FINISHED) {
               logMessage("SUBSCRIPTION_FINISHED", {
                 channel,
               });
@@ -482,7 +504,7 @@ export function RedisPubSub({
     ) {
       await Promise.all(
         values.map(async ({ value, identifier }) => {
-          const tracing = getTracing();
+          const tracing = enabledLogEvents?.PUBLISH_MESSAGE_EXECUTION_TIME ? getTracing() : null;
 
           let parsedValue: Input | Output;
 
@@ -497,7 +519,7 @@ export function RedisPubSub({
 
           await publisher.publish(channel, stringify(parsedValue));
 
-          if (intLogLevel) {
+          if (enabledLogEvents?.PUBLISH_MESSAGE) {
             logMessage("PUBLISH_MESSAGE", {
               channel,
             });

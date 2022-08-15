@@ -35,7 +35,7 @@
   "scripts": {
     "prepublishOnly": "concurrently -r \"bob-ts -f interop -i src -d dist --no-sourcemap\" \"tsc -p tsconfig.build.json\"",
     "release": "changeset publish",
-    "test": "c8 --100 --include=src --exclude=src/promise.ts ava",
+    "test": "c8 --check-coverage --lines=100 --statements=100 --branches=97 --functions=95 --include=src --exclude=src/promise.ts ava",
     "test:watch": "ava --watch",
     "test:watch:coverage": "bob-watch -w src test package.json -c \"pnpm test\""
   },
@@ -63,7 +63,7 @@
     "graphql-ez": "^0.15.1",
     "graphql-ws": "^5.9.1",
     "ioredis": "^5.0.5",
-    "pino": "^8.3.1",
+    "pino": "^8.4.1",
     "prettier": "^2.6.2",
     "typescript": "^4.7.2",
     "wait-for-expect": "^3.0.2",
@@ -71,14 +71,10 @@
   },
   "peerDependencies": {
     "ioredis": "^5.0.5",
-    "pino": "*",
     "zod": "^3.17.3"
   },
   "peerDependenciesMeta": {
     "ioredis": {
-      "optional": true
-    },
-    "pino": {
       "optional": true
     },
     "zod": {
