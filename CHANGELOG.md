@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 3.0.0
+
+### Major Changes
+
+- 7cecccb: Rework observability into logEvents.events + logEvents.log for full customizability
+
 ## 2.2.1
 
 ### Patch Changes
