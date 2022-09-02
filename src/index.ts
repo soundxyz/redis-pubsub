@@ -150,7 +150,7 @@ export function RedisPubSub({
       return;
     }
 
-    if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_WITHOUT_SUBSCRIBERS) {
+    if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS) {
       logMessage("SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS", {
         channel,
         subscribers: subscription.dataPromises.size,
