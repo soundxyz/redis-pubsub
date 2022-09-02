@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 3.0.1
+
+### Patch Changes
+
+- 795b08e: Fix SUBSCRIPTION_MESSAGE_WITH_SUBSCRIBERS log event
+
 ## 3.0.0
 
 ### Major Changes

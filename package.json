@@ -1,6 +1,6 @@
 {
   "name": "@soundxyz/redis-pubsub",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Full type-safe Redis PubSub with Zod",
   "keywords": [
     "ioredis",
