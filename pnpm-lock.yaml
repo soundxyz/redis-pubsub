@@ -14,7 +14,7 @@ specifiers:
   bob-watch: ^0.1.2
   c8: ^7.12.0
   concurrently: ^7.3.0
-  dotenv: ^16.0.2
+  dotenv: ^16.0.3
   esbuild: ^0.15.6
   fastify: ^4.5.3
   graphql: ^16.6.0
@@ -45,7 +45,7 @@ devDependencies:
   bob-watch: 0.1.2
   c8: 7.12.0
   concurrently: 7.3.0
-  dotenv: 16.0.2
+  dotenv: 16.0.3
   esbuild: 0.15.6
   fastify: 4.5.3
   graphql: 16.6.0
@@ -1243,8 +1243,8 @@ packages:
       path-type: 4.0.0
     dev: true
 
-  /dotenv/16.0.2:
-    resolution: {integrity: sha512-JvpYKUmzQhYoIFgK2MOnF3bciIZoItIIoryihy0rIA+H4Jy0FmgyKYAHCTN98P5ybGSJcIFbh6QKeJdtZd1qhA==}
+  /dotenv/16.0.3:
+    resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
     dev: true
 
