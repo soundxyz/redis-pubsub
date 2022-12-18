@@ -13,7 +13,7 @@ specifiers:
   bob-tsm: ^1.1.2
   bob-watch: ^0.1.2
   c8: ^7.12.0
-  concurrently: ^7.3.0
+  concurrently: ^7.6.0
   dotenv: ^16.0.3
   esbuild: ^0.15.6
   fastify: ^4.5.3
@@ -44,7 +44,7 @@ devDependencies:
   bob-tsm: 1.1.2_52c7osartarer34qjj3dltjuae
   bob-watch: 0.1.2
   c8: 7.12.0
-  concurrently: 7.3.0
+  concurrently: 7.6.0
   dotenv: 16.0.3
   esbuild: 0.15.6
   fastify: 4.5.3
@@ -1077,8 +1077,8 @@ packages:
       well-known-symbols: 2.0.0
     dev: true
 
-  /concurrently/7.3.0:
-    resolution: {integrity: sha512-IiDwm+8DOcFEInca494A8V402tNTQlJaYq78RF2rijOrKEk/AOHTxhN4U1cp7GYKYX5Q6Ymh1dLTBlzIMN0ikA==}
+  /concurrently/7.6.0:
+    resolution: {integrity: sha512-BKtRgvcJGeZ4XttiDiNcFiRlxoAeZOseqUvyYRUp/Vtd+9p1ULmeoSqGsDA+2ivdeDFpqrJvGvmI+StKfKl5hw==}
     engines: {node: ^12.20.0 || ^14.13.0 || >=16.0.0}
     hasBin: true
     dependencies:
