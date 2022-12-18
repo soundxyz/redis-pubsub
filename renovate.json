@@ -1,6 +1,30 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base"
+  "extends": ["config:base"],
+  "rangeStrategy": "bump",
+  "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 0,
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^@soundxyz/"],
+      "groupName": "Sound packages",
+      "dependencyDashboardApproval": false
+    },
+    {
+      "matchPackagePatterns": ["^@graphql-ez/"],
+      "matchPackageNames": ["graphql-ez"],
+      "groupName": "GraphQL EZ packages",
+      "dependencyDashboardApproval": false
+    },
+    {
+      "matchPackagePatterns": ["^@envelop/"],
+      "groupName": "Envelop packages",
+      "dependencyDashboardApproval": false
+    },
+    {
+      "matchPackagePatterns": ["^@changesets/"],
+      "groupName": "Changesets packages",
+      "dependencyDashboardApproval": false
+    }
   ]
 }
