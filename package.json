@@ -60,7 +60,7 @@
     "esbuild": "^0.15.6",
     "fastify": "^4.5.3",
     "graphql": "^16.6.0",
-    "graphql-ez": "^0.15.1",
+    "graphql-ez": "^0.15.2",
     "graphql-ws": "^5.10.1",
     "ioredis": "^5.2.3",
     "pino": "^8.4.2",

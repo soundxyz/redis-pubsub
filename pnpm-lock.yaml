@@ -18,7 +18,7 @@ specifiers:
   esbuild: ^0.15.6
   fastify: ^4.5.3
   graphql: ^16.6.0
-  graphql-ez: ^0.15.1
+  graphql-ez: ^0.15.2
   graphql-ws: ^5.10.1
   ioredis: ^5.2.3
   pino: ^8.4.2
@@ -34,9 +34,9 @@ dependencies:
 devDependencies:
   '@changesets/cli': 2.24.4
   '@graphql-ez/client': 0.6.0_kkgf72yslujyuigxt3phk42gx4
-  '@graphql-ez/fastify': 0.11.0_ppi6j4qffglixddhiqd2o37sku
-  '@graphql-ez/fastify-testing': 0.3.0_56mpo7av6rqh753wyiamf7aup4
-  '@graphql-ez/plugin-websockets': 0.10.5_2t5peodiafmhjyfq2d7hi6kct4
+  '@graphql-ez/fastify': 0.11.0_zw6ebkd5nx3pw2zt2ukoon7ggy
+  '@graphql-ez/fastify-testing': 0.3.0_xehqoqgzk3dsehqge4wcojbamm
+  '@graphql-ez/plugin-websockets': 0.10.5_hditd52etugpagukgom4kdu5mu
   '@pothos/core': 3.19.1_graphql@16.6.0
   '@types/node': 18.7.14
   ava: 4.3.3
@@ -49,7 +49,7 @@ devDependencies:
   esbuild: 0.15.6
   fastify: 4.5.3
   graphql: 16.6.0
-  graphql-ez: 0.15.1_kkgf72yslujyuigxt3phk42gx4
+  graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
   graphql-ws: 5.10.1_graphql@16.6.0
   ioredis: 5.2.3
   pino: 8.4.2
@@ -348,7 +348,7 @@ packages:
       undici: 5.10.0
     dev: true
 
-  /@graphql-ez/fastify-testing/0.3.0_56mpo7av6rqh753wyiamf7aup4:
+  /@graphql-ez/fastify-testing/0.3.0_xehqoqgzk3dsehqge4wcojbamm:
     resolution: {integrity: sha512-x+pChJRHEqoW6F+JdtvvQWLvYUeSkZLlzy7FvNEnP5CB4HqBXrx2Rxye8u6hnTbd2zu7O0a3mVU/R7wTySlmMA==}
     peerDependencies:
       '@graphql-ez/fastify': ^0.11.0
@@ -357,17 +357,17 @@ packages:
       graphql-ez: ^0.15.1
     dependencies:
       '@graphql-ez/client': 0.6.0_kkgf72yslujyuigxt3phk42gx4
-      '@graphql-ez/fastify': 0.11.0_ppi6j4qffglixddhiqd2o37sku
+      '@graphql-ez/fastify': 0.11.0_zw6ebkd5nx3pw2zt2ukoon7ggy
       '@graphql-ez/utils': 0.1.4_kkgf72yslujyuigxt3phk42gx4
       fastify: 4.5.3
       graphql: 16.6.0
-      graphql-ez: 0.15.1_kkgf72yslujyuigxt3phk42gx4
+      graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
     transitivePeerDependencies:
       - '@graphql-typed-document-node/core'
       - '@types/node'
     dev: true
 
-  /@graphql-ez/fastify/0.11.0_ppi6j4qffglixddhiqd2o37sku:
+  /@graphql-ez/fastify/0.11.0_zw6ebkd5nx3pw2zt2ukoon7ggy:
     resolution: {integrity: sha512-TcpJUI0iGiyGyNUydBGAFwtS04F6OdnHyPdwes6nqHG3/ZnMHfMNsF8Sa+r054VUpal1RkztfIHY/B+lAFew8Q==}
     engines: {node: '>=14.13.1'}
     peerDependencies:
@@ -386,10 +386,10 @@ packages:
       '@types/node': 18.7.14
       fastify: 4.5.3
       graphql: 16.6.0
-      graphql-ez: 0.15.1_kkgf72yslujyuigxt3phk42gx4
+      graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
     dev: true
 
-  /@graphql-ez/plugin-websockets/0.10.5_2t5peodiafmhjyfq2d7hi6kct4:
+  /@graphql-ez/plugin-websockets/0.10.5_hditd52etugpagukgom4kdu5mu:
     resolution: {integrity: sha512-Slb4DcZ0n25553GtaQSDBsCjhcPvqGOSIdE1iw1Ao0raZ+B4dUgXxQPhRUF9mh297EXFFUQArxxK5M+g/9bvRg==}
     engines: {node: '>=14.13.1'}
     peerDependencies:
@@ -402,7 +402,7 @@ packages:
       '@graphql-ez/utils': 0.1.4_kkgf72yslujyuigxt3phk42gx4
       '@types/ws': 8.5.3
       graphql: 16.6.0
-      graphql-ez: 0.15.1_kkgf72yslujyuigxt3phk42gx4
+      graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
       graphql-ws: 5.10.1_graphql@16.6.0
       subscriptions-transport-ws-envelop: 2.0.2_graphql@16.6.0+ws@8.8.1
       ws: 8.8.1
@@ -1843,8 +1843,8 @@ packages:
     resolution: {integrity: sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==}
     dev: true
 
-  /graphql-ez/0.15.1_kkgf72yslujyuigxt3phk42gx4:
-    resolution: {integrity: sha512-Apq5gn38Vomb0gw4cjnEy/OuH40a6C3Hl374kRK/njHD5bHB1a+xCSNwipKjNtzwC46cAoUY5n5uRk0HJp0v1g==}
+  /graphql-ez/0.15.2_kkgf72yslujyuigxt3phk42gx4:
+    resolution: {integrity: sha512-1Rs1FVlHYe1hSynZJe2g2DQneQhgIy64mWx3+rcKEpoaxSRsyRM9xjduGhrB5Xx0erwjcan6WeQqnViYy7g+2Q==}
     engines: {node: '>=14.13.1'}
     peerDependencies:
       graphql: '*'
@@ -1857,7 +1857,7 @@ packages:
       '@graphql-ez/utils': 0.1.4_kkgf72yslujyuigxt3phk42gx4
       '@pablosz/graphql-helix': 2.0.3_graphql@16.6.0
       graphql: 16.6.0
-      tiny-lru: 8.0.2
+      tiny-lru: 9.0.3
     transitivePeerDependencies:
       - '@types/node'
     dev: true
@@ -3277,6 +3277,11 @@ packages:
 
   /tiny-lru/8.0.2:
     resolution: {integrity: sha512-ApGvZ6vVvTNdsmt676grvCkUCGwzG9IqXma5Z07xJgiC5L7akUMof5U8G2JTI9Rz/ovtVhJBlY6mNhEvtjzOIg==}
+    engines: {node: '>=6'}
+    dev: true
+
+  /tiny-lru/9.0.3:
+    resolution: {integrity: sha512-/i9GruRjXsnDgehxvy6iZ4AFNVxngEFbwzirhdulomMNPGPVV3ECMZOWSw0w4sRMZ9Al9m4jy08GPvRxRUGYlw==}
     engines: {node: '>=6'}
     dev: true
 
