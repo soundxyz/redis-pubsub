@@ -19,7 +19,7 @@ specifiers:
   fastify: ^4.5.3
   graphql: ^16.6.0
   graphql-ez: ^0.15.2
-  graphql-ws: ^5.10.1
+  graphql-ws: ^5.14.0
   ioredis: ^5.2.3
   pino: ^8.4.2
   prettier: ^2.7.1
@@ -50,7 +50,7 @@ devDependencies:
   fastify: 4.5.3
   graphql: 16.6.0
   graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
-  graphql-ws: 5.10.1_graphql@16.6.0
+  graphql-ws: 5.14.0_graphql@16.6.0
   ioredis: 5.2.3
   pino: 8.4.2
   prettier: 2.7.1
@@ -404,7 +404,7 @@ packages:
       '@types/ws': 8.5.3
       graphql: 16.6.0
       graphql-ez: 0.15.2_kkgf72yslujyuigxt3phk42gx4
-      graphql-ws: 5.10.1_graphql@16.6.0
+      graphql-ws: 5.14.0_graphql@16.6.0
       subscriptions-transport-ws-envelop: 2.0.2_graphql@16.6.0+ws@8.8.1
       ws: 8.8.1
     transitivePeerDependencies:
@@ -1863,8 +1863,8 @@ packages:
       - '@types/node'
     dev: true
 
-  /graphql-ws/5.10.1_graphql@16.6.0:
-    resolution: {integrity: sha512-MKm/3SRd1vj5Km8NaujsgeGRTKZQjUN5HRnIMJ8dL2UznKoxvrtQyJqTmqJt0f6vQd9AooDg/+baXo3huiY4Ew==}
+  /graphql-ws/5.14.0_graphql@16.6.0:
+    resolution: {integrity: sha512-itrUTQZP/TgswR4GSSYuwWUzrE/w5GhbwM2GX3ic2U7aw33jgEsayfIlvaj7/GcIvZgNMzsPTrE5hqPuFUiE5g==}
     engines: {node: '>=10'}
     peerDependencies:
       graphql: '>=0.11 <=16'
