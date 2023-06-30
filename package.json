@@ -49,7 +49,7 @@
     "@graphql-ez/fastify-testing": "^0.3.0",
     "@graphql-ez/plugin-websockets": "^0.10.5",
     "@pothos/core": "^3.19.1",
-    "@types/node": "^18.7.14",
+    "@types/node": "^18.16.19",
     "ava": "^4.3.3",
     "bob-ts": "^4.1.1",
     "bob-tsm": "^1.1.2",
