@@ -3,8 +3,8 @@ import { parse, stringify } from "superjson";
 import type { ZodSchema, ZodTypeDef } from "zod";
 import {
   createDeferredPromise,
-  DeferredPromise,
-  PubSubDeferredPromise,
+  type DeferredPromise,
+  type PubSubDeferredPromise,
   pubsubDeferredPromise,
 } from "./promise";
 

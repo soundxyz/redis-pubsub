@@ -1,4 +1,4 @@
-import { LoggedEvents, RedisPubSub, RedisPubSubOptions } from "../src";
+import { type LoggedEvents, RedisPubSub,type RedisPubSubOptions } from "../src";
 import Pino from "pino";
 import Redis from "ioredis";
 

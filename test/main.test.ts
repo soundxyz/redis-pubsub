@@ -1,5 +1,5 @@
 import assert from "assert";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import Redis from "ioredis";
 import { stringify } from "superjson";
 import waitForExpect from "wait-for-expect";
