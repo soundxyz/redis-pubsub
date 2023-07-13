@@ -1,5 +1,12 @@
 # @soundxyz/redis-pubsub
 
+## 4.0.0
+
+### Major Changes
+
+- ff78cf7: Separate input from output of inputSchema and outputSchema
+- 37411c1: Make superjson peer dependency
+
 ## 3.0.1
 
 ### Patch Changes
