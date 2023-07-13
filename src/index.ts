@@ -57,7 +57,7 @@ export const EventCodes = {
   SUBSCRIPTION_ABORTED: "SUBSCRIPTION_ABORTED",
 } as const;
 
-export type EventCodes = typeof EventCodes[keyof typeof EventCodes];
+export type EventCodes = (typeof EventCodes)[keyof typeof EventCodes];
 
 export function RedisPubSub({
   publisher,
@@ -270,7 +270,7 @@ export function RedisPubSub({
     );
   }
 
-  function createChannel<Input, Output>({
+  function createChannel<PublishInput, ChannelData, SubscriberData>({
     name,
     isLazy = true,
     ...schemas
@@ -282,12 +282,12 @@ export function RedisPubSub({
     isLazy?: boolean;
   } & (
     | {
-        inputSchema: ZodSchema<Input, ZodTypeDef, Input>;
-        outputSchema: ZodSchema<Output, ZodTypeDef, Input>;
+        inputSchema: ZodSchema<ChannelData, ZodTypeDef, PublishInput>;
+        outputSchema: ZodSchema<SubscriberData, ZodTypeDef, ChannelData>;
         schema?: never;
       }
     | {
-        schema: ZodSchema<Output, ZodTypeDef, Input>;
+        schema: ZodSchema<SubscriberData, ZodTypeDef, PublishInput>;
         inputSchema?: never;
         outputSchema?: never;
       }
@@ -315,8 +315,6 @@ export function RedisPubSub({
       unsubscribe,
       publish,
       unsubscribeAll,
-      inputSchema,
-      outputSchema,
     };
 
     function getSubscriptionValue({
@@ -339,23 +337,23 @@ export function RedisPubSub({
       });
     }
 
-    function subscribe<FilteredValue extends Output>(subscribeArguments: {
+    function subscribe<FilteredValue extends SubscriberData>(subscribeArguments: {
       abortSignal?: AbortSignal;
-      filter: (value: Output) => value is FilteredValue;
+      filter: (value: SubscriberData) => value is FilteredValue;
       identifier?: string | number;
     }): AsyncGenerator<FilteredValue, void, unknown>;
     function subscribe(subscribeArguments?: {
       abortSignal?: AbortSignal;
-      filter?: (value: Output) => unknown;
+      filter?: (value: SubscriberData) => unknown;
       identifier?: string | number;
-    }): AsyncGenerator<Output, void, unknown>;
+    }): AsyncGenerator<SubscriberData, void, unknown>;
     async function* subscribe({
       abortSignal,
       filter,
       identifier,
     }: {
       abortSignal?: AbortSignal;
-      filter?: (value: Output) => unknown;
+      filter?: (value: SubscriberData) => unknown;
       identifier?: string | number;
     } = {}) {
       const channel = identifier ? name + identifier : name;
@@ -428,7 +426,7 @@ export function RedisPubSub({
         while (true) {
           await dataPromise.current.promise;
 
-          for (const value of dataPromise.current.values as Output[]) {
+          for (const value of dataPromise.current.values as SubscriberData[]) {
             if (filter && !filter(value)) {
               if (enabledLogEvents?.SUBSCRIPTION_MESSAGE_FILTERED_OUT) {
                 logMessage("SUBSCRIPTION_MESSAGE_FILTERED_OUT", {
@@ -498,15 +496,15 @@ export function RedisPubSub({
 
     async function publish(
       ...values: [
-        { value: Input; identifier?: string | number },
-        ...{ value: Input; identifier?: string | number }[]
+        { value: PublishInput; identifier?: string | number },
+        ...{ value: PublishInput; identifier?: string | number }[],
       ]
     ) {
       await Promise.all(
         values.map(async ({ value, identifier }) => {
           const tracing = enabledLogEvents?.PUBLISH_MESSAGE_EXECUTION_TIME ? getTracing() : null;
 
-          let parsedValue: Input | Output;
+          let parsedValue: ChannelData | SubscriberData;
 
           try {
             parsedValue = await inputSchema.parseAsync(value);
