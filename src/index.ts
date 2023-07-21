@@ -285,7 +285,7 @@ export function RedisPubSub({
   } & (
     | {
         inputSchema: ZodSchema<Maybe<ChannelData>, ZodTypeDef, PublishInput>;
-        outputSchema: ZodSchema<SubscriberData, ZodTypeDef, NonNullable<ChannelData>>;
+        outputSchema: ZodSchema<SubscriberData, ZodTypeDef, ChannelData>;
         schema?: never;
       }
     | {
