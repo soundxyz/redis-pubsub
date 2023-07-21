@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 4.1.2
+
+### Patch Changes
+
+- c6acdf9: Remove NonNullable filter on output schema generic
+
 ## 4.1.1
 
 ### Patch Changes
