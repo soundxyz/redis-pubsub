@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 4.1.0
+
+### Minor Changes
+
+- 69f7422: .publish can receive null or undefined and it skips the notification
+
 ## 4.0.0
 
 ### Major Changes
