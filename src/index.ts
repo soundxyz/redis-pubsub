@@ -270,6 +270,8 @@ export function RedisPubSub({
     );
   }
 
+  type Maybe<T> = T | null | undefined;
+
   function createChannel<PublishInput, ChannelData, SubscriberData>({
     name,
     isLazy = true,
@@ -282,12 +284,12 @@ export function RedisPubSub({
     isLazy?: boolean;
   } & (
     | {
-        inputSchema: ZodSchema<ChannelData, ZodTypeDef, PublishInput>;
-        outputSchema: ZodSchema<SubscriberData, ZodTypeDef, ChannelData>;
+        inputSchema: ZodSchema<Maybe<ChannelData>, ZodTypeDef, PublishInput>;
+        outputSchema: ZodSchema<SubscriberData, ZodTypeDef, NonNullable<ChannelData>>;
         schema?: never;
       }
     | {
-        schema: ZodSchema<SubscriberData, ZodTypeDef, PublishInput>;
+        schema: ZodSchema<NonNullable<SubscriberData>, ZodTypeDef, Maybe<PublishInput>>;
         inputSchema?: never;
         outputSchema?: never;
       }
@@ -496,8 +498,8 @@ export function RedisPubSub({
 
     async function publish(
       ...values: [
-        { value: PublishInput | null | undefined; identifier?: string | number },
-        ...{ value: PublishInput | null | undefined; identifier?: string | number }[],
+        { value: Maybe<PublishInput>; identifier?: string | number },
+        ...{ value: Maybe<PublishInput>; identifier?: string | number }[],
       ]
     ) {
       await Promise.all(
@@ -506,10 +508,11 @@ export function RedisPubSub({
 
           const tracing = enabledLogEvents?.PUBLISH_MESSAGE_EXECUTION_TIME ? getTracing() : null;
 
-          let parsedValue: ChannelData | SubscriberData;
+          let parsedValue: Maybe<ChannelData | SubscriberData>;
 
           try {
             parsedValue = await inputSchema.parseAsync(value);
+            if (parsedValue == null) return;
           } catch (err) {
             onParseError(err);
             return;
