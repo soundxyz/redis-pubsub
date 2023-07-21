@@ -496,12 +496,14 @@ export function RedisPubSub({
 
     async function publish(
       ...values: [
-        { value: PublishInput; identifier?: string | number },
-        ...{ value: PublishInput; identifier?: string | number }[],
+        { value: PublishInput | null | undefined; identifier?: string | number },
+        ...{ value: PublishInput | null | undefined; identifier?: string | number }[],
       ]
     ) {
       await Promise.all(
         values.map(async ({ value, identifier }) => {
+          if (value == null) return;
+
           const tracing = enabledLogEvents?.PUBLISH_MESSAGE_EXECUTION_TIME ? getTracing() : null;
 
           let parsedValue: ChannelData | SubscriberData;
