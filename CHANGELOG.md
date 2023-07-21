@@ -1,5 +1,11 @@
 # @soundxyz/redis-pubsub
 
+## 4.1.1
+
+### Patch Changes
+
+- ca6952f: Allow null or undefined inputs on schema level
+
 ## 4.1.0
 
 ### Minor Changes
