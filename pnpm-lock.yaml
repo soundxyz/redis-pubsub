@@ -72,8 +72,8 @@ devDependencies:
     specifier: ^3.0.0
     version: 3.0.0
   superjson:
-    specifier: ^1.12.4
-    version: 1.12.4
+    specifier: ^1.13.3
+    version: 1.13.3
   typescript:
     specifier: ^5.1.6
     version: 5.1.6
@@ -3363,8 +3363,8 @@ packages:
       ws: 8.13.0
     dev: true
 
-  /superjson@1.12.4:
-    resolution: {integrity: sha512-vkpPQAxdCg9SLfPv5GPC5fnGrui/WryktoN9O5+Zif/14QIMjw+RITf/5LbBh+9QpBFb3KNvJth+puz2H8o6GQ==}
+  /superjson@1.13.3:
+    resolution: {integrity: sha512-mJiVjfd2vokfDxsQPOwJ/PtanO87LhpYY88ubI5dUB1Ab58Txbyje3+jpm+/83R/fevaq/107NNhtYBLuoTrFg==}
     engines: {node: '>=10'}
     dependencies:
       copy-anything: 3.0.5

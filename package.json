@@ -62,14 +62,14 @@
     "ioredis": "^5.3.2",
     "pino": "^8.14.1",
     "prettier": "^3.0.0",
-    "superjson": "^1.12.4",
+    "superjson": "^1.13.3",
     "typescript": "^5.1.6",
     "wait-for-expect": "^3.0.2",
     "zod": "^3.21.4"
   },
   "peerDependencies": {
     "ioredis": "^5.0.5",
-    "superjson": "^1.12.4",
+    "superjson": "^1.13.3",
     "zod": "^3.17.3"
   },
   "peerDependenciesMeta": {
