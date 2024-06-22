@@ -21,8 +21,8 @@ devDependencies:
     specifier: ^0.11.2
     version: 0.11.2(@types/node@20.4.2)(graphql-ez@0.16.0)(graphql@16.7.1)
   '@pothos/core':
-    specifier: ^3.30.0
-    version: 3.30.0(graphql@16.7.1)
+    specifier: ^3.41.2
+    version: 3.41.2(graphql@16.7.1)
   '@types/node':
     specifier: ^20.4.2
     version: 20.4.2
@@ -706,8 +706,8 @@ packages:
       graphql: 16.7.1
     dev: true
 
-  /@pothos/core@3.30.0(graphql@16.7.1):
-    resolution: {integrity: sha512-ZUL2YTv3ODeKBkhkVcEO03lcERdqQaG2zfylNpkrY9ryAIhOuN9Pbo+VnfqhqEQx7jM/56Rro7i9AuhzF0Q3tA==}
+  /@pothos/core@3.41.2(graphql@16.7.1):
+    resolution: {integrity: sha512-iR1gqd93IyD/snTW47HwKSsRCrvnJaYwjVNcUG8BztZPqMxyJKPAnjPHAgu1XB82KEdysrNqIUnXqnzZIs08QA==}
     peerDependencies:
       graphql: '>=15.1.0'
     dependencies:
