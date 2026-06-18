@@ -54,7 +54,7 @@
     "c8": "^8.0.0",
     "concurrently": "^8.2.0",
     "dotenv": "^16.3.1",
-    "esbuild": "^0.18.12",
+    "esbuild": "^0.25.0",
     "fastify": "^4.19.2",
     "graphql": "^16.7.1",
     "graphql-ez": "^0.16.0",
